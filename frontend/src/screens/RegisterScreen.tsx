@@ -22,12 +22,12 @@ export default function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
 
   const handleContinue = () => {
-    if (email.trim() === '' || password.trim() === '') {
+   if (email.trim() === '' || password.trim() === '') {
       Alert.alert('Atenção', 'Preencha os dados para começar sua jornada.');
       return;
     }
-    // No futuro, isso levará para a tela de "Seleção de Perfil"
-    Alert.alert('Sucesso', 'Indo para o próximo passo do cadastro!');
+    // Levando o usuário para a seleção de perfil!
+    navigation.navigate('ProfileSelection');
   };
 
   return (
