@@ -41,7 +41,7 @@ export default function ProfileScreen() {
         {/* Item: Planos */}
         <TouchableOpacity style={styles.optionItem}>
           <View style={styles.optionLeft}>
-            <Ionicons name="crown-outline" size={28} color={colors.textDark} />
+            <Ionicons name="star-outline" size={28} color={colors.textDark} />
             <Text style={styles.optionText}>Planos</Text>
           </View>
           <Ionicons name="chevron-forward-circle" size={28} color={colors.primaryGreen} />
