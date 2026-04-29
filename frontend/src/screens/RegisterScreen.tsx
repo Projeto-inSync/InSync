@@ -17,21 +17,17 @@ type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
-export default function LoginScreen({ navigation }: Props) {
-  // Estados para guardar o que o usuário digita
+export default function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Função para validar e fazer o Login
-  const handleLogin = () => {
-    // O .trim() remove os espaços em branco acidentais
+  const handleContinue = () => {
     if (email.trim() === '' || password.trim() === '') {
-      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para entrar no InSync.');
-      return; 
+      Alert.alert('Atenção', 'Preencha os dados para começar sua jornada.');
+      return;
     }
-    
-    // Se passou pela validação acima, vamos para a Home (Panda)
-    navigation.navigate('Home');
+    // No futuro, isso levará para a tela de "Seleção de Perfil"
+    Alert.alert('Sucesso', 'Indo para o próximo passo do cadastro!');
   };
 
   return (
@@ -43,10 +39,8 @@ export default function LoginScreen({ navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        
-        {/* O "Card" Branco Central */}
         <View style={styles.card}>
-          <Text style={styles.title}>Bem-vindo</Text>
+          <Text style={styles.title}>Comece sua jornada</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>E-mail:</Text>
@@ -64,33 +58,30 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.label}>Senha:</Text>
             <TextInput 
               style={styles.input}
-              placeholder="insira sua senha"
+              placeholder="defina sua senha"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry // Esconde a senha
+              secureTextEntry 
             />
           </View>
 
-          {/* Botão de Entrar */}
           <TouchableOpacity 
             style={styles.button}
-            onPress={handleLogin}
+            onPress={handleContinue}
           >
-            <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.buttonText}>Continuar</Text>
           </TouchableOpacity>
-          
-          {/* Link para criar conta atualizado */}
+
+          {/* Botão para voltar ao Login caso o usuário tenha clicado sem querer */}
           <TouchableOpacity 
             style={styles.linkContainer}
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.linkText}>
-              Não tem uma conta? <Text style={styles.linkTextBold}>Crie uma!</Text>
+              Já tem uma conta? <Text style={styles.linkTextBold}>Entre aqui!</Text>
             </Text>
           </TouchableOpacity>
-          
         </View>
-
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -121,7 +112,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.textDark,
     marginBottom: 25,
