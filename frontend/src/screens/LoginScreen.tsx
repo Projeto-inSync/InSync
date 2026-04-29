@@ -7,7 +7,8 @@ import {
   StyleSheet, 
   ImageBackground,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -21,13 +22,23 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Função para validar e fazer o Login
+  const handleLogin = () => {
+    // O .trim() remove os espaços em branco acidentais
+    if (email.trim() === '' || password.trim() === '') {
+      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para entrar no InSync.');
+      return; 
+    }
+    
+    // Se passou pela validação acima, vamos para a Home (Panda)
+    navigation.navigate('Home');
+  };
+
   return (
-    // ImageBackground coloca a imagem cobrindo a tela toda
     <ImageBackground 
-      source={require('../assets/background_bamboo.png')}
+      source={require('../assets/background_bamboo.png')} 
       style={styles.background}
     >
-      {/* KeyboardAvoidingView evita que o teclado cubra os campos de digitação no celular */}
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -56,14 +67,14 @@ export default function LoginScreen({ navigation }: Props) {
               placeholder="insira sua senha"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry // Esconde a senha com pontinhos
+              secureTextEntry // Esconde a senha
             />
           </View>
 
-          {/* Botão de Entrar (Usamos TouchableOpacity para ter o efeito de clique) */}
+          {/* Botão de Entrar */}
           <TouchableOpacity 
             style={styles.button}
-            onPress={() => navigation.navigate('Home')}
+            onPress={handleLogin}
           >
             <Text style={styles.buttonText}>Entrar</Text>
           </TouchableOpacity>
@@ -93,18 +104,17 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
     width: '100%',
     maxWidth: 320,
-    borderRadius: 20,
+    borderRadius: 25, 
     padding: 30,
     alignItems: 'center',
-    // Sombra para o card (Android e iOS)
-    elevation: 5,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   title: {
     fontSize: 24,
