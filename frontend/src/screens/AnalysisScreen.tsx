@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -10,39 +9,58 @@ type Props = {
 
 export default function AnalysisScreen({ navigation }: Props) {
   
-  // Lógica de simulação de carregamento (mantida)
+  // Criamos o valor animado para a rotação (começa em 0)
+  const spinValue = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    // Simula o tempo do Panda "pensando" (3 segundos)
+    // Configura a animação de rotação contínua (loop)
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1, // Vai até 1 (representa 360 graus)
+        duration: 1500, // Duração de uma volta completa
+        easing: Easing.linear, // Movimento constante, sem aceleração/desaceleração
+        useNativeDriver: true, // Usa o motor nativo para performance suave
+      })
+    ).start(); // Inicia o loop
+
+    // Mantemos a lógica do temporizador de 3 segundos para navegar
     const timer = setTimeout(() => {
-      // Agora, em vez de voltar, vamos para a tela de resultados
-      // que vamos criar no próximo passo!
       navigation.navigate('FoodResult'); 
     }, 3000);
 
-    return () => clearTimeout(timer);
-  }, [navigation]);
+    return () => {
+      // Limpa a animação e o timer se o usuário sair da tela
+      spinValue.stopAnimation();
+      clearTimeout(timer);
+    };
+  }, [navigation, spinValue]);
+
+  // Interpolação: Converte o valor de 0-1 em 0deg-360deg para o estilo
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   return (
-    // O container principal simula a mesa cinza escuro
     <View style={styles.container}>
       
-      {/* O "Card" central de análise, com o fundo cinza claro e borda azul */}
+      {/* O "Card" central de análise (idêntico ao Figma) */}
       <View style={styles.analysisCard}>
         
-        {/* Texto superior centralizado e negrito */}
         <Text style={styles.titleText}>
           [nome_pet] está analisando as propriedades do alimento, aguarde um instante.
         </Text>
         
-        {/* Ícone de sincronização/carregamento verde */}
-        <Ionicons 
-          name="sync" 
-          size={80} 
-          color="#A5D6A7" // Um verde claro pastel para o ícone
-          style={styles.syncIcon} 
-        />
+        {/* Ícone de sincronização AGORA É UM Animated.View */}
+        <Animated.View style={[styles.syncIcon, { transform: [{ rotate: spin }] }]}>
+          <Ionicons 
+            name="sync" 
+            size={80} 
+            color="#A5D6A7" 
+          />
+        </Animated.View>
         
-        {/* O Panda pensativo/triste oficial (thinking_panda.png) */}
+        {/* O Panda pensativo oficial (thinking_panda.png) */}
         <Image 
           source={require('../assets/thinking_panda.png')} 
           style={styles.pandaImage} 
@@ -57,41 +75,41 @@ export default function AnalysisScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#333333', // Fundo escuro simulando a mesa
+    backgroundColor: '#333333', 
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   analysisCard: {
-    backgroundColor: '#E0E0E0', // Fundo cinza claro do card
+    backgroundColor: '#E0E0E0', 
     width: '100%',
-    height: Dimensions.get('window').height * 0.8, // Ocupa 80% da altura da tela
-    borderRadius: 30, // Bordas bem arredondadas
+    height: Dimensions.get('window').height * 0.8, 
+    borderRadius: 30, 
     borderWidth: 4,
-    borderColor: '#42A5F5', // Borda azul viva
+    borderColor: '#42A5F5', 
     padding: 30,
     alignItems: 'center',
-    justifyContent: 'space-between', // Espalha os itens verticalmente
-    elevation: 10, // Sombra para o card
+    justifyContent: 'space-between', 
+    elevation: 10, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
   },
   titleText: {
-    fontSize: 22, // Fonte grande e legível
-    fontWeight: 'bold', // Negrito
+    fontSize: 22, 
+    fontWeight: 'bold', 
     color: '#000000',
     textAlign: 'center',
     marginTop: 20,
   },
   syncIcon: {
-    // Pode adicionar uma animação de rotação aqui no futuro
+    // A animação de rotação é aplicada aqui
   },
   pandaImage: {
     width: 220,
     height: 220,
-    resizeMode: 'contain', // Garante que a imagem não corte
-    marginBottom: 20, // Dá um respiro na parte inferior
+    resizeMode: 'contain', 
+    marginBottom: 20, 
   }
 });
