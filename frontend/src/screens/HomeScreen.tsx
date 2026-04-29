@@ -109,9 +109,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   petContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute', // Ativa o posicionamento absoluto
+    bottom: 0, // Fixa o container na borda inferior da tela
+    width: '100%', // Garante que ocupe toda a largura para centralizar a imagem
+    alignItems: 'center', // Centraliza o panda horizontalmente
+    marginBottom: 50,
   },
   pandaImage: {
     width: width * 0.7, // 70% da largura da tela
