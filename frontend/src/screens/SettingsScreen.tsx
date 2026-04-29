@@ -1,87 +1,162 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 
-type Props = {
-  // Como essa tela está dentro de uma Tab que está dentro de um Stack, 
-  // ela herda o poder de navegar por tudo!
-  navigation: NativeStackNavigationProp<any, any>;
-};
-
-export default function SettingsScreen({ navigation }: Props) {
-  
-  const handleLogout = () => {
-    Alert.alert(
-      'Sair do InSync',
-      'Tem certeza que deseja sair da sua conta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sair', 
-          style: 'destructive',
-          onPress: () => {
-            // Apaga o histórico e manda o usuário de volta para a estaca zero
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          }
-        }
-      ]
-    );
-  };
+export default function SettingsScreen() {
+  // Estados para controlar o visual dos botões (ligado/desligado)
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(true);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
-      {/* Título */}
-      <Text style={styles.title}>Configurações</Text>
+      <View style={styles.headerBackground}>
+        <Text style={styles.pageTitle}>Configurações</Text>
+      </View>
 
-      {/* Linha tracejada separadora */}
-      <View style={styles.separator} />
+      <View style={styles.content}>
+        
+        {/* Cartão de Preferências de Áudio */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Áudio</Text>
+          
+          <View style={styles.card}>
+            
+            {/* Linha: Efeitos Sonoros */}
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={styles.iconWrapper}>
+                  <Ionicons name="volume-high" size={22} color={colors.primaryGreen} />
+                </View>
+                <Text style={styles.settingText}>Efeitos Sonoros</Text>
+              </View>
+              <Switch
+                trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+                thumbColor={soundEnabled ? colors.primaryGreen : '#FAFAFA'}
+                onValueChange={setSoundEnabled}
+                value={soundEnabled}
+              />
+            </View>
 
-      {/* Botão de Sair */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Sair</Text>
-        <Ionicons name="log-out-outline" size={28} color={colors.textDark} />
-      </TouchableOpacity>
+            <View style={styles.divider} />
 
-    </View>
+            {/* Linha: Música de Fundo */}
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={styles.iconWrapper}>
+                  <Ionicons name="musical-notes" size={22} color={colors.primaryGreen} />
+                </View>
+                <Text style={styles.settingText}>Música de Fundo</Text>
+              </View>
+              <Switch
+                trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+                thumbColor={musicEnabled ? colors.primaryGreen : '#FAFAFA'}
+                onValueChange={setMusicEnabled}
+                value={musicEnabled}
+              />
+            </View>
+
+          </View>
+        </View>
+
+        {/* Espaço para futuras configurações (Notificações, Privacidade, etc) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Geral</Text>
+          <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={[styles.iconWrapper, { backgroundColor: '#FFEBEE' }]}>
+                  <Ionicons name="log-out-outline" size={22} color="#E53935" />
+                </View>
+                <Text style={[styles.settingText, { color: '#E53935', fontWeight: 'bold' }]}>Sair da Conta</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#E53935" />
+            </View>
+          </View>
+        </View>
+
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: 80, // Espaço para não encostar no relógio do celular
-    paddingHorizontal: 30,
+    backgroundColor: '#F4F9F4',
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '900', // Fonte bem grossa como no Figma
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 30,
+  headerBackground: {
+    backgroundColor: colors.primaryGreen,
+    paddingTop: 60,
+    paddingBottom: 20,
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
-  separator: {
-    width: '100%',
-    borderBottomWidth: 2,
-    borderColor: '#E0E0E0',
-    borderStyle: 'dashed', // Faz a linha ficar tracejada
-    marginBottom: 30,
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: 'white',
   },
-  logoutButton: {
+  content: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.textGray,
+    marginBottom: 10,
+    marginLeft: 10,
+    textTransform: 'uppercase',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingVertical: 5,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  logoutText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  settingText: {
+    fontSize: 16,
     color: colors.textDark,
-    marginRight: 10,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEEEEE',
+    marginLeft: 70, // Mantém a linha alinhada apenas com o texto, ignorando o ícone
+    marginRight: 20,
   }
 });
