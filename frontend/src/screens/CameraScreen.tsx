@@ -10,9 +10,8 @@ type Props = {
 export default function CameraScreen({ navigation }: Props) {
   
   const handleTakePicture = () => {
-    // Por enquanto, apenas avisa que o botão funciona.
-    // No próximo passo, faremos esse botão navegar para a tela do Panda Analisando!
-    alert('📸 Click! Foto simulada com sucesso!');
+    // Agora o "click" manda o usuário direto para o Panda pensar!
+    navigation.navigate('Analysis');
   };
 
   return (

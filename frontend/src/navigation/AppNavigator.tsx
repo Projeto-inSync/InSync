@@ -8,6 +8,7 @@ import ProfileSelectionScreen from '../screens/ProfileSelectionScreen';
 import ChildRegisterScreen from '../screens/ChildRegisterScreen';
 import ResponsibleRegisterScreen from '../screens/ResponsibleRegisterScreen';
 import TabNavigator from './TabNavigator';
+import AnalysisScreen from '../screens/AnalysisScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,7 @@ export default function AppNavigator() {
         <Stack.Screen name="ChildRegister" component={ChildRegisterScreen} />
         <Stack.Screen name="ResponsibleRegister" component={ResponsibleRegisterScreen} />
         <Stack.Screen name="Home" component={TabNavigator} />
+        <Stack.Screen name="Analysis" component={AnalysisScreen} />
       {}
       </Stack.Navigator> 
     </NavigationContainer>
