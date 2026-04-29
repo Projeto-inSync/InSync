@@ -18,20 +18,16 @@ type Props = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
-  // Estados para guardar o que o usuário digita
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Função para validar e fazer o Login
   const handleLogin = () => {
-    // O .trim() remove os espaços em branco acidentais
     if (email.trim() === '' || password.trim() === '') {
       Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para entrar no InSync.');
       return; 
     }
-    
-    // Se passou pela validação acima, vamos para a Home (Panda)
-    navigation.navigate('Home');
+    // Navegação atualizada para a Tab Principal
+    navigation.navigate('HomeTab');
   };
 
   return (
@@ -43,8 +39,6 @@ export default function LoginScreen({ navigation }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        
-        {/* O "Card" Branco Central */}
         <View style={styles.card}>
           <Text style={styles.title}>Bem-vindo</Text>
 
@@ -67,19 +61,17 @@ export default function LoginScreen({ navigation }: Props) {
               placeholder="insira sua senha"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry // Esconde a senha
+              secureTextEntry 
             />
           </View>
 
-          {/* Botão de Entrar */}
           <TouchableOpacity 
             style={styles.button}
             onPress={handleLogin}
           >
             <Text style={styles.buttonText}>Entrar</Text>
           </TouchableOpacity>
-          
-          {/* Link para criar conta atualizado */}
+
           <TouchableOpacity 
             style={styles.linkContainer}
             onPress={() => navigation.navigate('Register')}
@@ -88,9 +80,7 @@ export default function LoginScreen({ navigation }: Props) {
               Não tem uma conta? <Text style={styles.linkTextBold}>Crie uma!</Text>
             </Text>
           </TouchableOpacity>
-          
         </View>
-
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -108,7 +98,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
     width: '100%',
     maxWidth: 320,
     borderRadius: 25, 

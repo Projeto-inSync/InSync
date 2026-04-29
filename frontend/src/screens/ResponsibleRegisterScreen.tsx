@@ -28,7 +28,7 @@ export default function ResponsibleRegisterScreen({ navigation }: Props) {
     
     // Sucesso! Por enquanto, vamos mandar o responsável também para a Home
     // No futuro, isso vai para a "Tela Admin / Dashboard" do Responsável
-    navigation.navigate('Home');
+    navigation.navigate('HomeTab');
   };
 
   return (

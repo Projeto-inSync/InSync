@@ -28,7 +28,7 @@ export default function ChildRegisterScreen({ navigation }: Props) {
     }
     
     // Sucesso! Vamos levar o usuário direto para a Home para conhecer o Panda
-    navigation.navigate('Home');
+    navigation.navigate('HomeTab');
   };
 
   return (
