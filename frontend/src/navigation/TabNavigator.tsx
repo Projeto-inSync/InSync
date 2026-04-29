@@ -7,6 +7,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import CameraScreen from '../screens/CameraScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 
 // -------------------------------------------------------------
 // Truque Sênior: Telas Falsas para preencher a barra de navegação
@@ -49,7 +50,7 @@ export default function TabNavigator() {
       {/* 2. Calendário */}
       <Tab.Screen 
         name="CalendarTab" 
-        component={DummyCalendar} 
+        component={CalendarScreen} 
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size + 2} /> }}
       />
 
