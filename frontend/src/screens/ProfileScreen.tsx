@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import CustomButton from '../components/CustomButton';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
   // Estado para controlar o Pop-up de trocar usuário
   const [modalVisible, setModalVisible] = useState(false);
   // Estado para guardar quem é o usuário atual
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
 
           <CustomButton 
             title="Conhecer Planos" 
-            onPress={() => alert('Abrir tela de pagamentos em breve!')} 
+            onPress={() => navigation.navigate('Payment')} 
             style={{ marginTop: 20 }}
           />
         </View>
