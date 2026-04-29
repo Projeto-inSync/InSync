@@ -24,9 +24,12 @@ export default function ProfileSelectionScreen({ navigation }: Props) {
       return;
     }
     
-    // Por enquanto vamos colocar um Alerta. 
-    // No futuro, se for Responsável vai para uma tela, se for Filho vai para outra!
-    Alert.alert('Sucesso', `Perfil ${perfil} selecionado! Vamos criar as próximas telas logo logo.`);
+    // A mágica acontece aqui: o app decide para qual tela ir com base na bolinha selecionada!
+    if (perfil === 'Filho') {
+      navigation.navigate('ChildRegister');
+    } else {
+      Alert.alert('Aviso', 'A tela do Responsável será criada no próximo passo!');
+    }
   };
 
   return (
