@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+
+// Importando o nosso botão customizado com o efeito de "clique"
+import CustomButton from '../components/CustomButton';
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -11,8 +14,6 @@ type Props = {
 export default function FoodResultScreen({ navigation }: Props) {
   
   const handleFeed = () => {
-    // Mandamos o usuário para a Home, avisando que o panda deve comer!
-    // Como a Home está dentro de abas, usamos essa estrutura de "screen" e "params"
     navigation.navigate('HomeTab', { 
       screen: 'HomeTab', 
       params: { feedPanda: true } 
@@ -20,7 +21,6 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleCancel = () => {
-    // Apenas volta para a Home, sem avisar nada (o panda continua normal)
     navigation.navigate('HomeTab');
   };
 
@@ -70,21 +70,19 @@ export default function FoodResultScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Botão Principal: Alimentar */}
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleFeed}
-          >
-            <Text style={styles.buttonText}>Alimentar Mascote</Text>
-          </TouchableOpacity>
+          {/* Nossos botões novos em ação! */}
+          <CustomButton 
+            title="Alimentar Mascote" 
+            onPress={handleFeed} 
+            style={{ marginTop: 20 }} 
+          />
 
-          {/* Botão Secundário: Cancelar */}
-          <TouchableOpacity 
-            style={styles.cancelButton}
-            onPress={handleCancel}
-          >
-            <Text style={styles.cancelButtonText}>Não alimentar</Text>
-          </TouchableOpacity>
+          <CustomButton 
+            title="Não alimentar" 
+            onPress={handleCancel} 
+            variant="cancel" 
+            style={{ marginTop: 10 }}
+          />
 
         </View>
 
@@ -110,14 +108,5 @@ const styles = StyleSheet.create({
   barIncrease: { fontSize: 14, fontWeight: 'bold', color: colors.primaryGreen },
   barIncreaseWarning: { fontSize: 14, fontWeight: 'bold', color: '#FFA000' },
   barBackground: { width: '100%', height: 12, backgroundColor: '#EEEEEE', borderRadius: 6, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 6 },
-  button: {
-    backgroundColor: colors.primaryGreen, width: '100%', height: 55, borderRadius: 30,
-    justifyContent: 'center', alignItems: 'center', marginTop: 20,
-  },
-  buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  cancelButton: {
-    width: '100%', height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 10,
-  },
-  cancelButtonText: { color: '#E53935', fontSize: 16, fontWeight: 'bold' } // Vermelho para indicar cancelamento
+  barFill: { height: '100%', borderRadius: 6 }
 });
