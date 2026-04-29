@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons'; 
 import { colors } from '../theme/colors';
 import SettingsScreen from '../screens/SettingsScreen';
-
+import CameraScreen from '../screens/CameraScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -42,7 +42,7 @@ export default function TabNavigator() {
       {/* 1. Câmera */}
       <Tab.Screen 
         name="CameraTab" 
-        component={DummyCamera} 
+        component={CameraScreen} 
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="camera" color={color} size={size + 2} /> }}
       />
       
