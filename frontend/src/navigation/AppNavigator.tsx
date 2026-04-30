@@ -11,7 +11,7 @@ import ResponsibleRegisterScreen from '../screens/ResponsibleRegisterScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import FoodResultScreen from '../screens/FoodResultScreen'; // <-- A tela que estava faltando no mapa!
 import PaymentScreen from '../screens/PaymentScreen';
-
+import AdminScreen from '../screens/AdminScreen';
 // Importação do nosso Menu Inferior (que contém a Home, Perfil, etc)
 import TabNavigator from './TabNavigator';
 
@@ -39,6 +39,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Analysis" component={AnalysisScreen} />
         <Stack.Screen name="FoodResult" component={FoodResultScreen} />
         <Stack.Screen name="Payment" component={PaymentScreen} />
+        <Stack.Screen name="Admin" component={AdminScreen} />
         
       </Stack.Navigator>
     </NavigationContainer>

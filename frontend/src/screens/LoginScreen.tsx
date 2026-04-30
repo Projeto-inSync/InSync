@@ -26,7 +26,14 @@ export default function LoginScreen({ navigation }: Props) {
       Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para entrar no InSync.');
       return; 
     }
-    // Navegação atualizada para a Tab Principal
+
+    // A MÁGICA ACONTECE AQUI:
+    if (email.trim().toLowerCase() === '@admin') {
+      navigation.navigate('Admin');
+      return;
+    }
+
+    // Se for um usuário normal, vai para a Home
     navigation.navigate('HomeTab');
   };
 
