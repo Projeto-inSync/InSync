@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function SettingsScreen() {
-  // Estados para controlar o visual dos botões (ligado/desligado)
+// Adicionamos { navigation }: any para a tela ter acesso ao GPS do app
+export default function SettingsScreen({ navigation }: any) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(true);
 
@@ -17,13 +17,11 @@ export default function SettingsScreen() {
 
       <View style={styles.content}>
         
-        {/* Cartão de Preferências de Áudio */}
+        {/* Seção de Áudio */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Áudio</Text>
           
           <View style={styles.card}>
-            
-            {/* Linha: Efeitos Sonoros */}
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <View style={styles.iconWrapper}>
@@ -41,7 +39,6 @@ export default function SettingsScreen() {
 
             <View style={styles.divider} />
 
-            {/* Linha: Música de Fundo */}
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <View style={styles.iconWrapper}>
@@ -56,23 +53,30 @@ export default function SettingsScreen() {
                 value={musicEnabled}
               />
             </View>
-
           </View>
         </View>
 
-        {/* Espaço para futuras configurações (Notificações, Privacidade, etc) */}
+        {/* Seção Geral - Onde corrigimos o botão de Sair */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Geral</Text>
           <View style={styles.card}>
-            <View style={styles.settingRow}>
+            
+            {/* Agora o TouchableOpacity tem a função onPress para voltar ao Login */}
+            <TouchableOpacity 
+              style={styles.settingRow} 
+              onPress={() => navigation.navigate('Login')}
+            >
               <View style={styles.settingInfo}>
                 <View style={[styles.iconWrapper, { backgroundColor: '#FFEBEE' }]}>
                   <Ionicons name="log-out-outline" size={22} color="#E53935" />
                 </View>
-                <Text style={[styles.settingText, { color: '#E53935', fontWeight: 'bold' }]}>Sair da Conta</Text>
+                <Text style={[styles.settingText, { color: '#E53935', fontWeight: 'bold' }]}>
+                  Sair da Conta
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#E53935" />
-            </View>
+            </TouchableOpacity>
+
           </View>
         </View>
 
@@ -82,10 +86,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F9F4',
-  },
+  container: { flex: 1, backgroundColor: '#F4F9F4' },
   headerBackground: {
     backgroundColor: colors.primaryGreen,
     paddingTop: 60,
@@ -99,64 +100,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textGray,
-    marginBottom: 10,
-    marginLeft: 10,
-    textTransform: 'uppercase',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    paddingVertical: 5,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  settingText: {
-    fontSize: 16,
-    color: colors.textDark,
-    fontWeight: '500',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#EEEEEE',
-    marginLeft: 70, // Mantém a linha alinhada apenas com o texto, ignorando o ícone
-    marginRight: 20,
-  }
+  pageTitle: { fontSize: 22, fontWeight: 'bold', color: 'white' },
+  content: { padding: 20 },
+  section: { marginBottom: 25 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.textGray, marginBottom: 10, marginLeft: 10, textTransform: 'uppercase' },
+  card: { backgroundColor: 'white', borderRadius: 20, paddingVertical: 5, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 15 },
+  settingInfo: { flexDirection: 'row', alignItems: 'center' },
+  iconWrapper: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  settingText: { fontSize: 16, color: colors.textDark, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#EEEEEE', marginLeft: 70, marginRight: 20 }
 });
