@@ -1,10 +1,19 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from services.images_service import process_image_service
+from fastapi.middleware.cors import CORSMiddleware 
 from services.connection_db import register_user_service, add_character_name_service, login_user_service, save_status_to_db, get_character_status, add_mission_service, get_missions_service
-from status import Status
+# from status import Status
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Permite que qualquer origem (seu front) acesse a API
+    allow_credentials=True,
+    allow_methods=["*"], # Permite todos os métodos (GET, POST, etc)
+    allow_headers=["*"], # Permite todos os headers
+)
 
 class ImageData(BaseModel):
     image_base64: str
@@ -18,7 +27,7 @@ class Character(BaseModel):
     idPaciente: int
     nome: str
 
-status = Status()
+status = None
 
 @app.post("/process-image")
 async def process_image(data: ImageData):
