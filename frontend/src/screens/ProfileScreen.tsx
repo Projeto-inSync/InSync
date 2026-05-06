@@ -157,8 +157,8 @@ export default function ProfileScreen({ navigation }: any) {
 
             {/* Opção: Adicionar Mais */}
             <TouchableOpacity style={styles.addUserOption} onPress={() => {
-              setModalVisible(false);
-              alert('Navegar para a tela de adicionar dependente!');
+              setModalVisible(false); // Fecha o modal primeiro
+              navigation.navigate('AddDependent'); // E então navega!
             }}>
               <Ionicons name="add-circle-outline" size={30} color={colors.primaryGreen} />
               <Text style={styles.addUserText}>Adicionar filho(a)</Text>

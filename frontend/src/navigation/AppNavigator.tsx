@@ -14,6 +14,7 @@ import PaymentScreen from '../screens/PaymentScreen';
 import AdminScreen from '../screens/AdminScreen';
 // Importação do nosso Menu Inferior (que contém a Home, Perfil, etc)
 import TabNavigator from './TabNavigator';
+import AddDependentScreen from '../screens/AddDependentScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +41,7 @@ export default function AppNavigator() {
         <Stack.Screen name="FoodResult" component={FoodResultScreen} />
         <Stack.Screen name="Payment" component={PaymentScreen} />
         <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="AddDependent" component={AddDependentScreen} />
         
       </Stack.Navigator>
     </NavigationContainer>
