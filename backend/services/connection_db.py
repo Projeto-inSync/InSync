@@ -1,10 +1,12 @@
 import psycopg2
 from psycopg2 import OperationalError
+from psycopg2 import errors as pg_errors
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 from pydantic import BaseModel
 import os
 from fastapi import HTTPException
+import bcrypt
 
 class User(BaseModel):
     nome: str
@@ -38,44 +40,48 @@ def get_db_connection():
         return conn
     except OperationalError as err:
         raise HTTPException(status_code=400, detail=f"Erro ao conectar no banco: {str(err)}")
-    
-# if __name__ == "__main__":
-#     print("Tentando conectar ao banco de dados...")
-#     try:
-#         conexao = get_db_connection()
-#         print("✅ CONEXÃO ESTABELECIDA COM SUCESSO!")
-        
-#         conexao.close()
-#     except Exception as e:
-#         print(f"❌ ERRO NA CONEXÃO: {e}")
 
 # revisar esse ponto aqui
 def register_user_service(user: User):
+    conn = None
+    cursor = None
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         query = """
-            INSET INTO Paciente (nome, email, senha, tipo)
+            INSERT INTO Paciente (nome, email, senha, tipo)
             VALUES (%s, %s, %s, 'responsavel')
             RETURNING idPaciente
         """
 
-        cursor.execute(query, (user.nome, user.email, user.senha))
+        hashed_password = bcrypt.hashpw(user.senha.encode('utf-8'), bcrypt.gensalt())
+        cursor.execute(query, (user.nome, user.email, hashed_password.decode('utf-8')))
         id_paciente = cursor.fetchone()[0]
 
         conn.commit()
-        cursor.close()
-        conn.close()
 
         return {
             "success": True,
             "message": "Responsável registrado com sucesso",
             "idPaciente": id_paciente
         }
-    
+    except pg_errors.UniqueViolation:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.")
+
     except Exception as err:
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
     
 #importar essa nova função(create_child_service) no início do main
 def create_child_service(child: Child):
@@ -89,10 +95,15 @@ def create_child_service(child: Child):
             RETURNING idPaciente
         """
 
+        hashed_password = bcrypt.hashpw(
+            child.senha.encode('utf-8'),
+            bcrypt.gensalt()
+        )
+
         cursor.execute(query, (
             child.nome,
             child.username,
-            child.senha,
+            hashed_password.decode('utf-8'),
             child.idResponsavel
         ))
 
@@ -138,35 +149,69 @@ def add_character_name_service(character: Character):
         raise HTTPException(status_code=400, detail=str(err))
     
 def login_user_service(login: str, senha: str):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        query = """
-            SELECT idPaciente, nome, tipo
-            FROM Paciente
-            WHERE (email = %s OR username = %s)
-            AND senha = %s
-        """
+        if "@" in login:
+            query = """
+                SELECT idPaciente, nome, tipo, senha
+                FROM Paciente
+                WHERE email = %s
+                AND tipo = 'responsavel'
+            """
+            cursor.execute(query, (login,))
+        else:
+            query = """
+                SELECT idPaciente, nome, tipo, senha
+                FROM Paciente
+                WHERE username = %s
+                AND tipo = 'filho'
+            """
+            cursor.execute(query, (login,))
 
-        cursor.execute(query, (login, login, senha))
         user = cursor.fetchone()
 
-        cursor.close()
-        conn.close()
-
-        if user:
-            return {
-                "success": True,
-                "message": "Login bem-sucedido",
-                "user": user
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Credenciais incorretas")
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuário não encontrado")
         
+        senha_hash = user[3]
+
+        senha_correta = bcrypt.checkpw(
+            senha.encode('utf-8'),
+            senha_hash.encode('utf-8')
+        )
+
+        if not senha_correta:
+            raise HTTPException(status_code=401, detail="Senha incorreta")
+
+        return {
+            "success": True,
+            "message": "Login bem-sucedido",
+            "user": {
+                "idPaciente": user[0],
+                "nome": user[1],
+                "tipo": user[2]
+            }
+        }
+    
+    except HTTPException:
+        raise
+
     except Exception as err:
-        raise HTTPException(status_code=400, detail=str(err))
-#
+        raise HTTPException(
+            status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
 def save_status_to_db(id_paciente, status_data):
     try:
         conn = get_db_connection()
