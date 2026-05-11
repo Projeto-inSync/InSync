@@ -27,6 +27,7 @@ const Tab = createBottomTabNavigator();
 export default function TabNavigator() {
   return (
     <Tab.Navigator
+      initialRouteName='Home'
       screenOptions={{
         headerShown: false, 
         tabBarActiveTintColor: colors.primaryGreen, 
@@ -56,7 +57,7 @@ export default function TabNavigator() {
 
       {/* 3. Home (A Casa do Panda) */}
       <Tab.Screen 
-        name="HomeTab" 
+        name="Home" 
         component={HomeScreen} 
         options={{ tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size + 2} /> }}
       />
