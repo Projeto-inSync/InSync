@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from services.images_service import process_image_service
+# from services.images_service import process_image_service
 from services.connection_db import register_user_service, add_character_name_service, login_user_service, save_status_to_db, get_character_status, add_mission_service, get_missions_service
-from status import Status
+# from status import Status
 
 app = FastAPI()
 
@@ -18,21 +18,23 @@ class Character(BaseModel):
     idPaciente: int
     nome: str
 
-status = Status()
+# status = Status()
 
-@app.post("/process-image")
-async def process_image(data: ImageData):
-    try:
-        classification, status_data = process_image_service(data.image_base64, status)
-        return {"classification": classification, "status": status_data}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# @app.post("/process-image")
+# async def process_image(data: ImageData):
+#     try:
+#         classification, status_data = process_image_service(data.image_base64, status)
+#         return {"classification": classification, "status": status_data}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
     
 @app.post("/register")
 async def register_user(user: User):
     try:
         result = register_user_service(user)
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -46,14 +48,16 @@ async def add_character_name(character: Character):
         raise HTTPException(status_code=400, detail=str(e))
     
 class LoginData(BaseModel):
-    email: str
+    login: str
     senha: str
 
 @app.post("/login")
 async def login_user(user: LoginData):
     try:
-        result = login_user_service(user.email, user.senha)
+        result = login_user_service(user.login, user.senha)
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
