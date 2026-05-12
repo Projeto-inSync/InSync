@@ -161,7 +161,7 @@ def login_user_service(login: str, senha: str):
                 SELECT idPaciente, nome, tipo, senha
                 FROM Paciente
                 WHERE email = %s
-                AND tipo = 'responsavel'
+                AND tipo IN ('responsavel', 'admin')
             """
             cursor.execute(query, (login,))
         else:
