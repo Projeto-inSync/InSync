@@ -322,3 +322,38 @@ def get_missions_service(id_paciente: int):
 
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
+    
+def get_admin_stats_service():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo IN ('responsavel', 'filho')
+        """)
+        total_ativos = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo = 'responsavel'
+        """)
+        total_reponsaveis = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo = 'filho'
+        """)
+        total_filhos = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        return {
+            "totalAtivos": total_ativos,
+            "totalResponsaveis": total_reponsaveis,
+            "totalFilhos": total_filhos
+        }
+    
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))
