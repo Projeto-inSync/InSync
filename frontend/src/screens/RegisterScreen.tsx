@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { registerStyles } from '../theme/registerStyles';
-import { API_URL } from '@env';
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;

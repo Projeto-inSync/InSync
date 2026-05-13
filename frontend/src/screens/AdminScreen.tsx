@@ -4,7 +4,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../theme/colors';
-import { API_URL } from '@env';
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const screenWidth = Dimensions.get("window").width;
 
