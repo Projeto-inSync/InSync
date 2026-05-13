@@ -161,7 +161,7 @@ def login_user_service(login: str, senha: str):
                 SELECT idPaciente, nome, tipo, senha
                 FROM Paciente
                 WHERE email = %s
-                AND tipo = 'responsavel'
+                AND tipo IN ('responsavel', 'admin')
             """
             cursor.execute(query, (login,))
         else:
@@ -320,5 +320,71 @@ def get_missions_service(id_paciente: int):
         else:
             raise HTTPException(status_code=404, detail="Missões não encontradas")
 
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    
+def get_admin_stats_service():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo IN ('responsavel', 'filho')
+        """)
+        total_ativos = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo = 'responsavel'
+        """)
+        total_reponsaveis = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM Paciente
+            WHERE tipo = 'filho'
+        """)
+        total_filhos = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        return {
+            "totalAtivos": total_ativos,
+            "totalResponsaveis": total_reponsaveis,
+            "totalFilhos": total_filhos
+        }
+    
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    
+def get_monthly_registrations_service():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                TO_CHAR(criado_em, 'Mon') AS mes,
+                COUNT(*) AS total
+            FROM Paciente
+            WHERE tipo IN ('responsavel', 'filho')
+            AND criado_em >= NOW() - INTERVAL '6 months'
+            GROUP BY DATE_TRUNC('month', criado_em), TO_CHAR(criado_em, 'Mon')
+            ORDER BY DATE_TRUNC('month', criado_em)
+        """)
+
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        labels = [row[0] for row in rows]
+        data = [row[1] for row in rows]
+
+        return {
+            "labels": labels,
+            "data": data
+        }
+    
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
