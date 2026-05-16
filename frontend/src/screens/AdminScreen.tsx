@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../theme/colors';
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -12,18 +14,51 @@ type Props = {
 };
 
 export default function AdminScreen({ navigation }: Props) {
-  
+  const [stats, setStats] = useState({
+    totalAtivos: 0,
+    totalResponsaveis: 0,
+    totalFilhos: 0
+  })
+  const [monthlyData, setMonthlyData] = useState<{labels: string[], data: number[]}>({
+    labels: [],
+    data: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const [statsRes, monthlyRes] = await Promise.all([
+        fetch(`${API_URL}/admin-stats`),
+        fetch(`${API_URL}/admin-monthly-registrations`),
+      ]);
+
+      const statsData = await statsRes.json();
+      const monthly = await monthlyRes.json();
+
+      setStats(statsData);
+      setMonthlyData(monthly);
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Dados simulados (Mock) para a visão semestral
   const semesterData = {
-    labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
+    labels: monthlyData.labels.length > 1 ? monthlyData.labels : ["", ...monthlyData.labels],
     datasets: [
       {
-        data: [65, 68, 75, 82, 88, 92], // Evolução positiva da saúde geral
+        data: monthlyData.data.length > 1 ? monthlyData.data : [0, ...monthlyData.data], // Evolução positiva da saúde geral
         color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
         strokeWidth: 3
       }
     ],
-    legend: ["Índice de Saúde Geral (%)"]
+    legend: ["Novos Cadastros por Mês"]
   };
 
   const chartConfig = {
@@ -52,40 +87,46 @@ export default function AdminScreen({ navigation }: Props) {
         
         <Text style={styles.sectionTitle}>Visão Geral de Usuários</Text>
         
-        {/* Cartões de Estatísticas */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { borderTopColor: '#2196F3', borderTopWidth: 4 }]}>
-            <Ionicons name="people" size={30} color="#2196F3" />
-            <Text style={styles.statValue}>1.245</Text>
-            <Text style={styles.statLabel}>Usuários Ativos</Text>
-          </View>
-          
-          <View style={[styles.statCard, { borderTopColor: colors.primaryGreen, borderTopWidth: 4 }]}>
-            <Ionicons name="person-add" size={30} color={colors.primaryGreen} />
-            <Text style={styles.statValue}>800</Text>
-            <Text style={styles.statLabel}>Plano Pai e Filho</Text>
-          </View>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primaryGreen} />
+        ) : (
+          <View style={styles.statsContainer}>
+            <View style={[styles.statCard, { borderTopColor: '#2196F3', borderTopWidth: 4 }]}>
+              <Ionicons name="people" size={30} color="#2196F3" />
+              <Text style={styles.statValue}>{stats.totalAtivos}</Text>
+              <Text style={styles.statLabel}>Usuários Ativos</Text>
+            </View>
+            
+            <View style={[styles.statCard, { borderTopColor: colors.primaryGreen, borderTopWidth: 4 }]}>
+              <Ionicons name="person-add" size={30} color={colors.primaryGreen} />
+              <Text style={styles.statValue}>{stats.totalResponsaveis}</Text>
+              <Text style={styles.statLabel}>Responsáveis</Text>
+            </View>
 
-          <View style={[styles.statCard, { borderTopColor: '#FFA000', borderTopWidth: 4 }]}>
-            <Ionicons name="home" size={30} color="#FFA000" />
-            <Text style={styles.statValue}>445</Text>
-            <Text style={styles.statLabel}>Plano Família</Text>
+            <View style={[styles.statCard, { borderTopColor: '#FFA000', borderTopWidth: 4 }]}>
+              <Ionicons name="home" size={30} color="#FFA000" />
+              <Text style={styles.statValue}>{stats.totalFilhos}</Text>
+              <Text style={styles.statLabel}>Filhos</Text>
+            </View>
           </View>
-        </View>
+        )}
 
-        <Text style={styles.sectionTitle}>Impacto InSync (Semestral)</Text>
+        <Text style={styles.sectionTitle}>Novos Cadastros por Mês</Text>
 
-        {/* Gráfico de Evolução da Saúde */}
-        <View style={styles.chartWrapper}>
-          <LineChart
-            data={semesterData}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primaryGreen} />
+        ) : (
+          <View style={styles.chartWrapper}>
+            <LineChart
+              data={semesterData}
+              width={screenWidth  - 40}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          </View>
+        )}
         
       </View>
     </ScrollView>
@@ -109,11 +150,11 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textDark, marginBottom: 15, marginTop: 10 },
   statsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
   statCard: { 
-    backgroundColor: 'white', 
-    width: '48%', 
-    padding: 20, 
-    borderRadius: 15, 
-    alignItems: 'center', 
+    backgroundColor: 'white',
+    width: '48%',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
     marginBottom: 15,
     elevation: 3,
   },
