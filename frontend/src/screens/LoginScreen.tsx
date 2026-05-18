@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
-// import { API_URL } from '@env';
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -22,12 +24,15 @@ type Props = {
 export default function LoginScreen({ navigation }: Props) {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (login.trim() === '' || password.trim() === '') {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos para entrar no InSync.');
-      return; 
+      return;
     }
+
+    setLoading(true);
 
     try {
       const response = await fetch(`${API_URL}/login`, {
@@ -36,8 +41,8 @@ export default function LoginScreen({ navigation }: Props) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          login: login,
-          senha:password,
+          login: login.trim(),
+          senha:password.trim(),
         }),
       });
 
@@ -48,6 +53,10 @@ export default function LoginScreen({ navigation }: Props) {
         return; 
       }
 
+      await AsyncStorage.setItem('idPaciente', String(data.user.idPaciente));
+      await AsyncStorage.setItem('tipo', data.user.tipo);
+      await AsyncStorage.setItem('nome', data.user.nome);
+
       if (data.user.tipo === 'admin') {
         navigation.navigate('Admin');
         return;
@@ -57,15 +66,17 @@ export default function LoginScreen({ navigation }: Props) {
 
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <ImageBackground 
-      source={require('../assets/background_bamboo.png')} 
+    <ImageBackground
+      source={require('../assets/background_bamboo.png')}
       style={styles.background}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
@@ -74,7 +85,7 @@ export default function LoginScreen({ navigation }: Props) {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>E-mail ou Username:</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="insira seu e-mail ou username"
               value={login}
@@ -86,23 +97,27 @@ export default function LoginScreen({ navigation }: Props) {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Senha:</Text>
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="insira sua senha"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry 
+              secureTextEntry
             />
           </View>
 
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleLogin}
-          >
-            <Text style={styles.buttonText}>Entrar</Text>
-          </TouchableOpacity>
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.primaryGreen} style={{ marginTop: 10 }} />
+          ) : (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+            >
+              <Text style={styles.buttonText}>Entrar</Text>
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkContainer}
             onPress={() => navigation.navigate('Register')}
           >

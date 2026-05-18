@@ -10,9 +10,10 @@ import {
   Alert
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerStyles } from '../theme/registerStyles';
-// import { API_URL } from '@env';
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -63,6 +64,10 @@ export default function RegisterScreen({ navigation }: Props) {
         Alert.alert('Erro no cadastro', data.detail || 'Tente novamente.');
         return;
       }
+
+      await AsyncStorage.setItem('idPaciente', String(data.idPaciente));
+      await AsyncStorage.setItem('tipo', 'responsavel');
+      await AsyncStorage.setItem('nome', name.trim());
 
       navigation.replace('HomeTab');
 
