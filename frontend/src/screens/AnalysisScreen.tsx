@@ -1,41 +1,84 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL } from '@env';
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
 export default function AnalysisScreen({ navigation }: Props) {
-  
-  // Criamos o valor animado para a rotação (começa em 0)
   const spinValue = useRef(new Animated.Value(0)).current;
+  const [petName, setPetName] = useState('');
+
+  const fetcPethName =async () => {
+    try {
+      const idAtivo = await AsyncStorage.getItem('idAtivo');
+      const tipo = await AsyncStorage.getItem('tipo');
+      const idResponsavel = await AsyncStorage.getItem('idPaciente');
+
+      if (!idAtivo) return;
+
+      if (tipo === 'filho') {
+        const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        return;
+      }
+      if (tipo === 'responsavel') {
+        if (idAtivo && idAtivo !== idResponsavel) {
+          const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data?.nome) setPetName(data.nome);
+        } else {
+          const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
+          if (!response.ok) return;
+          const dependents = await response.json();
+          if (dependents.length === 0) {
+            setPetName('Sem mascote');
+            return;
+          }
+          if (dependents[0].nomemascote) {
+            setPetName(dependents[0].nomemascote);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Erro ao buscar nome do pet:', error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetcPethName();
+    }, [])
+  );
 
   useEffect(() => {
-    // Configura a animação de rotação contínua (loop)
     Animated.loop(
       Animated.timing(spinValue, {
-        toValue: 1, // Vai até 1 (representa 360 graus)
-        duration: 1500, // Duração de uma volta completa
-        easing: Easing.linear, // Movimento constante, sem aceleração/desaceleração
-        useNativeDriver: true, // Usa o motor nativo para performance suave
+        toValue: 1,
+        duration: 1500,
+        easing: Easing.linear,
+        useNativeDriver: true,
       })
-    ).start(); // Inicia o loop
+    ).start();
 
-    // Mantemos a lógica do temporizador de 3 segundos para navegar
     const timer = setTimeout(() => {
       navigation.navigate('FoodResult'); 
     }, 3000);
 
     return () => {
-      // Limpa a animação e o timer se o usuário sair da tela
       spinValue.stopAnimation();
       clearTimeout(timer);
     };
   }, [navigation, spinValue]);
 
-  // Interpolação: Converte o valor de 0-1 em 0deg-360deg para o estilo
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
@@ -48,7 +91,7 @@ export default function AnalysisScreen({ navigation }: Props) {
       <View style={styles.analysisCard}>
         
         <Text style={styles.titleText}>
-          [nome_pet] está analisando as propriedades do alimento, aguarde um instante.
+          {petName} está analisando as propriedades do alimento, aguarde um instante.
         </Text>
         
         {/* Ícone de sincronização AGORA É UM Animated.View */}
