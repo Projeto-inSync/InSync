@@ -14,7 +14,7 @@ from services.connection_db import (
     create_child_service,
     get_dependents_service
 )
-# from status import Status
+from status import Status
 
 app = FastAPI()
 
@@ -35,7 +35,7 @@ class ChildData(BaseModel):
     senha: str
     idResponsavel: str
 
-# status = Status()
+status = Status()
 
 # @app.post("/process-image")
 # async def process_image(data: ImageData):
