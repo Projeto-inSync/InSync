@@ -239,24 +239,20 @@ def save_status_to_db(id_paciente, status_data):
 
         query = """
             UPDATE Personagem
-            SET energia = %s,
-                forca = %s,
-                felicidade = %s,
-                alimentacao = %s,
+            SET carboidrato = %s,
+                glicemia = %s,
+                proteina = %s,
                 xp = %s
             WHERE idPaciente = %s
         """
 
-        data = (
-            status_data['energia'],
-            status_data['forca'],
-            status_data['felicidade'],
-            status_data['alimentacao'],
+        cursor.execute(query, (
+            status_data['carboidrato'],
+            status_data['glicemia'],
+            status_data['proteina'],
             status_data['xp'],
             id_paciente
-        )
-
-        cursor.execute(query, data)
+        ))
         conn.commit()
 
     except Exception as err:
@@ -280,7 +276,7 @@ def get_character_status(id_paciente: int):
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         query = """
-            SELECT nome, forca, energia, felicidade, alimentacao, xp
+            SELECT nome, carboidrato, glicemia, proteina, xp
             FROM Personagem
             WHERE idPaciente = %s
         """

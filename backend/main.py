@@ -90,20 +90,18 @@ async def login_user(user: LoginData):
     
 class StatusData(BaseModel):
     idPaciente:int
-    energia: float
-    forca: float
-    felicidade: float
-    alimentacao: float
+    carboidrato: float
+    glicemia: float
+    proteina: float
     xp: int
 
 @app.post("/save-status")
 async def save_status(status_data: StatusData):
     try:
         save_status_to_db(status_data.idPaciente, {
-            'energia': status_data.energia,
-            'forca': status_data.forca,
-            'felicidade': status_data.felicidade,
-            'alimentacao': status_data.alimentacao,
+            'carboidrato': status_data.carboidrato,
+            'glicemia': status_data.glicemia,
+            'proteina': status_data.proteina,
             'xp': status_data.xp
         })
         return {"message": "Status saved successfully"}
