@@ -6,14 +6,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 // import ProfileSelectionScreen from '../screens/ProfileSelectionScreen';
-// import ChildRegisterScreen from '../screens/ChildRegisterScreen';
-// import ResponsibleRegisterScreen from '../screens/ResponsibleRegisterScreen';
-import TabNavigator from './TabNavigator';
+import ChildRegisterScreen from '../screens/ChildRegisterScreen';
+import ResponsibleRegisterScreen from '../screens/ResponsibleRegisterScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import FoodResultScreen from '../screens/FoodResultScreen'; // <-- A tela que estava faltando no mapa!
 import PaymentScreen from '../screens/PaymentScreen';
 import AdminScreen from '../screens/AdminScreen';
-// Importação do nosso Menu Inferior (que contém a Home, Perfil, etc)
+import TabNavigator from './TabNavigator';
+import AddDependentScreen from '../screens/AddDependentScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +28,9 @@ export default function AppNavigator() {
         {/* Fluxo de Autenticação */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        {/* <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} /> */}
+        <Stack.Screen name="ChildRegister" component={ChildRegisterScreen} />
+        <Stack.Screen name="ResponsibleRegister" component={ResponsibleRegisterScreen} />
         
         {/* O Menu Principal do App */}
         <Stack.Screen name="HomeTab" component={TabNavigator} />
@@ -37,6 +40,7 @@ export default function AppNavigator() {
         <Stack.Screen name="FoodResult" component={FoodResultScreen} />
         <Stack.Screen name="Payment" component={PaymentScreen} />
         <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="AddDependent" component={AddDependentScreen} />
         
       </Stack.Navigator>
     </NavigationContainer>

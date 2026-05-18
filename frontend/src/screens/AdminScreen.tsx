@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../theme/colors';
-// import { API_URL } from '@env';
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -13,7 +13,16 @@ type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
+// Dados mockados simulando o que viria do seu banco de dados (Back-end)
+const MOCK_USERS = [
+  { id: '1', name: 'Carlos Oliveira', email: 'carlos@email.com', plan: 'Pai e Filho', isActive: true },
+  { id: '2', name: 'Ana Souza', email: 'ana@email.com', plan: 'Família', isActive: true },
+  { id: '3', name: 'Roberto Almeida', email: 'roberto@email.com', plan: 'Pai e Filho', isActive: false },
+  { id: '4', name: 'Fernanda Lima', email: 'fernanda@email.com', plan: 'Família', isActive: true },
+];
+
 export default function AdminScreen({ navigation }: Props) {
+  const [usersList, setUsersList] = useState(MOCK_USERS);
   const [stats, setStats] = useState({
     totalAtivos: 0,
     totalResponsaveis: 0,
@@ -48,6 +57,7 @@ export default function AdminScreen({ navigation }: Props) {
     }
   };
 
+
   // Dados simulados (Mock) para a visão semestral
   const semesterData = {
     labels: monthlyData.labels.length > 1 ? monthlyData.labels : ["", ...monthlyData.labels],
@@ -69,6 +79,15 @@ export default function AdminScreen({ navigation }: Props) {
     barPercentage: 0.5,
     useShadowColorFromDataset: false,
     decimalPlaces: 0,
+  };
+
+  // Função que inverte o status (Ativo/Inativo) de um usuário específico
+  const toggleUserStatus = (id: string) => {
+    setUsersList(prevUsers => 
+      prevUsers.map(user => 
+        user.id === id ? { ...user, isActive: !user.isActive } : user
+      )
+    );
   };
 
   return (
@@ -112,7 +131,50 @@ export default function AdminScreen({ navigation }: Props) {
         )}
 
         <Text style={styles.sectionTitle}>Novos Cadastros por Mês</Text>
+        {/* Gráfico de Evolução da Saúde */}
+        <View style={styles.chartWrapper}>
+          <LineChart
+            data={semesterData}
+            width={screenWidth - 40}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+          />
+        </View>
 
+        {/* NOVA SEÇÃO: Gerenciamento de Usuários */}
+        <Text style={styles.sectionTitle}>Gerenciamento de Contas</Text>
+        
+        <View style={styles.userListContainer}>
+          {usersList.map((user) => (
+            <View key={user.id} style={[styles.userRow, !user.isActive && styles.userRowInactive]}>
+              
+              <View style={styles.userInfo}>
+                <View style={styles.userIconWrapper}>
+                  <Ionicons name="person" size={20} color={user.isActive ? colors.primaryGreen : '#9E9E9E'} />
+                </View>
+                <View>
+                  <Text style={[styles.userName, !user.isActive && styles.textInactive]}>{user.name}</Text>
+                  <Text style={styles.userDetail}>{user.email} • {user.plan}</Text>
+                </View>
+              </View>
+
+              <View style={styles.switchWrapper}>
+                <Text style={[styles.statusText, { color: user.isActive ? colors.primaryGreen : '#E53935' }]}>
+                  {user.isActive ? 'Ativo' : 'Inativo'}
+                </Text>
+                <Switch
+                  trackColor={{ false: '#FFCDD2', true: '#C8E6C9' }}
+                  thumbColor={user.isActive ? colors.primaryGreen : '#E53935'}
+                  onValueChange={() => toggleUserStatus(user.id)}
+                  value={user.isActive}
+                />
+              </View>
+              
+            </View>
+          ))}
+        </View>
         {loading ? (
           <ActivityIndicator size="large" color={colors.primaryGreen} />
         ) : (
@@ -127,8 +189,8 @@ export default function AdminScreen({ navigation }: Props) {
             />
           </View>
         )}
-        
       </View>
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -136,7 +198,7 @@ export default function AdminScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F9F4' },
   header: { 
-    backgroundColor: '#1B5E20', // Verde mais escuro para diferenciar do app normal
+    backgroundColor: '#1B5E20',
     paddingTop: 60, 
     paddingBottom: 20, 
     paddingHorizontal: 20,
@@ -160,6 +222,66 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 24, fontWeight: '900', color: colors.textDark, marginTop: 10, marginBottom: 5 },
   statLabel: { fontSize: 12, color: colors.textGray, textAlign: 'center' },
-  chartWrapper: { alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingVertical: 20, elevation: 3, marginBottom: 40 },
-  chart: { borderRadius: 16 }
+  chartWrapper: { alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingVertical: 20, elevation: 3, marginBottom: 20 },
+  chart: { borderRadius: 16 },
+  
+  // Estilos da nova lista de usuários
+  userListContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  userRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  userRowInactive: {
+    backgroundColor: '#FAFAFA',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1, // Faz a área de info ocupar o espaço restante
+  },
+  userIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.textDark,
+  },
+  userDetail: {
+    fontSize: 12,
+    color: colors.textGray,
+    marginTop: 2,
+  },
+  textInactive: {
+    color: '#9E9E9E', // Deixa o nome cinza quando inativo
+  },
+  switchWrapper: {
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  }
 });
