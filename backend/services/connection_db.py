@@ -280,7 +280,7 @@ def get_character_status(id_paciente: int):
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         query = """
-            SELECT forca, energia, felicidade, alimentacao, xp
+            SELECT nome, forca, energia, felicidade, alimentacao, xp
             FROM Personagem
             WHERE idPaciente = %s
         """
@@ -291,7 +291,9 @@ def get_character_status(id_paciente: int):
         if not status:
             raise HTTPException(status_code=404, detail="Status do personagem não encontrado")
         return status
-
+    
+    except HTTPException:
+        raise
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
     
