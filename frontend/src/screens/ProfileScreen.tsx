@@ -1,34 +1,72 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
   ScrollView,
   Modal,
-  Pressable
+  Pressable,
+  ActivityIndicator
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import CustomButton from '../components/CustomButton';
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function ProfileScreen({ navigation }: any) {
-  // Estado para controlar o Pop-up de trocar usuário
   const [modalVisible, setModalVisible] = useState(false);
-  // Estado para guardar quem é o usuário atual
-  const [currentUser, setCurrentUser] = useState('Joãozinho (Filho)');
+  const [loading, setLoading] = useState(true);
+  const [parentName, setParentName] = useState('Responsável');
+  const [dependents, setDependents] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState('')
 
-  // Função para simular a troca de usuário
-  const handleSwitchUser = (name: string) => {
-    setCurrentUser(name);
+  const fetchFamilyData = async () => {
+    setLoading(true);
+    try {
+      const idResponsavel = await AsyncStorage.getItem("idPaciente");
+      const nomeResponsavel = await AsyncStorage.getItem("nome");
+
+      if (nomeResponsavel) {
+        setParentName(nomeResponsavel);
+        // Só define currentUser como responsável se ainda não foi trocado. se não estiver como quero. pedir para buscar com o usuário do responsável que fez o login
+        setCurrentUser(prev => prev === '' ? `${nomeResponsavel} (Responsavel)` : prev);
+      }
+
+      if (idResponsavel) {
+        const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setDependents(data);
+        }
+      }
+    } catch (error) {
+      console.log("Erro ao buscar dependentes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchFamilyData();
+    }, [])
+  );
+
+  const handleSwitchUser = (name: string, isParent: boolean) => {
+    setCurrentUser(isParent ? `${name} (Responsavel)` : name);
     setModalVisible(false);
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
-      {/* 1. Área Superior (Verde) com o Avatar e Título */}
+      {/* 1. Área Superior (Verde) */}
       <View style={styles.headerBackground}>
         <Text style={styles.pageTitle}>Portal da Família</Text>
         <View style={styles.avatarWrapper}>
@@ -39,18 +77,20 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* 2. Barra Escura de Informações do Usuário Atual */}
+      {/* 2. Barra de Informações do Usuário Atual */}
       <View style={styles.infoBar}>
         <View>
           <Text style={styles.currentUserText}>Usuário atual:</Text>
-          <Text style={styles.petName}>{currentUser}</Text>
+          <Text style={styles.petName}>
+            {currentUser || `${parentName} (Responsável)`}
+          </Text>
         </View>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Text style={styles.switchUser}>Trocar usuário</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 3. Seção de Medalhas (Conquistas) */}
+      {/* 3. Seção de Medalhas */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="ribbon" size={24} color={colors.primaryGreen} />
@@ -64,14 +104,12 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
             <Text style={styles.medalText}>1ª Refeição</Text>
           </View>
-
           <View style={styles.medalItem}>
             <View style={[styles.medalCircle, { backgroundColor: '#E1F5FE' }]}>
               <Ionicons name="flame" size={28} color="#03A9F4" />
             </View>
             <Text style={styles.medalText}>3 Dias Foco</Text>
           </View>
-
           <View style={styles.medalItem}>
             <View style={[styles.medalCircle, { backgroundColor: '#E8F5E9' }]}>
               <Ionicons name="star" size={28} color={colors.primaryGreen} />
@@ -81,7 +119,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* 4. Seção do Plano e Benefícios */}
+      {/* 4. Seção do Plano */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="card" size={24} color={colors.primaryGreen} />
@@ -91,23 +129,10 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={styles.planCard}>
           <Text style={styles.planStatus}>Teste gratuito de 15 dias</Text>
           <Text style={styles.planDescription}>
-            Aproveite todos os recursos premium! Você pode assinar o <Text style={styles.bold}>Plano InSync: Pai e Filho</Text> ou o <Text style={styles.bold}>Plano Família</Text> (para múltiplos filhos).
+            Aproveite todos os recursos premium! Você pode assinar o{' '}
+            <Text style={styles.bold}>Plano InSync: Pai e Filho</Text> ou o{' '}
+            <Text style={styles.bold}>Plano Família</Text>.
           </Text>
-
-          <Text style={styles.benefitsTitle}>Vantagens Premium:</Text>
-          <View style={styles.benefitRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.primaryGreen} />
-            <Text style={styles.benefitText}>Controle total da saúde e glicemia</Text>
-          </View>
-          <View style={styles.benefitRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.primaryGreen} />
-            <Text style={styles.benefitText}>Acesso ilimitado à Câmera IA</Text>
-          </View>
-          <View style={styles.benefitRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.primaryGreen} />
-            <Text style={styles.benefitText}>Acesso aos Gráficos Históricos</Text>
-          </View>
-
           <CustomButton 
             title="Conhecer Planos" 
             onPress={() => navigation.navigate('Payment')} 
@@ -116,12 +141,9 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Espaçamento no final da tela */}
       <View style={{ height: 40 }} />
 
-      {/* --------------------------------------------------- */}
-      {/* MODAL: Pop-up de Trocar Usuário */}
-      {/* --------------------------------------------------- */}
+      {/* MODAL: Trocar Usuário */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -130,36 +152,65 @@ export default function ProfileScreen({ navigation }: any) {
       >
         <Pressable 
           style={styles.modalOverlay} 
-          onPress={() => setModalVisible(false)} // Fecha se clicar fora
+          onPress={() => setModalVisible(false)}
         >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Quem está usando?</Text>
 
-            {/* Opção: Responsável */}
-            <TouchableOpacity style={styles.userOption} onPress={() => handleSwitchUser('Carlos (Responsável)')}>
+            {/* Opção do Responsável */}
+            <TouchableOpacity 
+              style={styles.userOption} 
+              onPress={() => handleSwitchUser(parentName, true)}
+            >
               <Ionicons name="person-circle" size={40} color={colors.textDark} />
-              <Text style={styles.userOptionText}>Carlos (Responsável)</Text>
+              <Text style={styles.userOptionText}>{parentName} (Responsável)</Text>
             </TouchableOpacity>
 
-            {/* Opção: Filho 1 */}
-            <TouchableOpacity style={styles.userOption} onPress={() => handleSwitchUser('Joãozinho (Filho)')}>
-              <Image source={require('../assets/happy_panda.png')} style={styles.modalAvatar} />
-              <Text style={styles.userOptionText}>Joãozinho</Text>
-            </TouchableOpacity>
-
-            {/* Opção: Filho 2 */}
-            <TouchableOpacity style={styles.userOption} onPress={() => handleSwitchUser('Mariazinha (Filha)')}>
-              <Image source={require('../assets/happy_panda.png')} style={styles.modalAvatar} />
-              <Text style={styles.userOptionText}>Mariazinha</Text>
-            </TouchableOpacity>
+            {/* Lista de Filhos */}
+            {loading ? (
+              <ActivityIndicator 
+                size="small" 
+                color={colors.primaryGreen} 
+                style={{ marginVertical: 15 }} 
+              />
+            ) : dependents.length > 0 ? (
+              dependents.map((dep, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.userOption} 
+                  onPress={() => handleSwitchUser(dep.nomefilho, false)}
+                >
+                  <Image 
+                    source={require('../assets/happy_panda.png')} 
+                    style={styles.modalAvatar} 
+                  />
+                  <View style={{ marginLeft: 15 }}>
+                    <Text style={[styles.userOptionText, { marginLeft: 0 }]}>
+                      {dep.nomefilho}
+                    </Text>
+                    {dep.nomemascote && (
+                      <Text style={{ color: colors.textGray, fontSize: 12 }}>
+                        Mascote: {dep.nomemascote}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>
+                Nenhum filho adicionado ainda.
+              </Text>
+            )}
 
             <View style={styles.divider} />
 
-            {/* Opção: Adicionar Mais */}
-            <TouchableOpacity style={styles.addUserOption} onPress={() => {
-              setModalVisible(false); // Fecha o modal primeiro
-              navigation.navigate('AddDependent'); // E então navega!
-            }}>
+            <TouchableOpacity 
+              style={styles.addUserOption} 
+              onPress={() => {
+                setModalVisible(false);
+                navigation.navigate('AddDependent');
+              }}
+            >
               <Ionicons name="add-circle-outline" size={30} color={colors.primaryGreen} />
               <Text style={styles.addUserText}>Adicionar filho(a)</Text>
             </TouchableOpacity>
@@ -193,11 +244,7 @@ const styles = StyleSheet.create({
   planStatus: { fontSize: 18, fontWeight: 'bold', color: '#FFA000', marginBottom: 10 },
   planDescription: { fontSize: 14, color: colors.textGray, marginBottom: 15, lineHeight: 20 },
   bold: { fontWeight: 'bold', color: colors.textDark },
-  benefitsTitle: { fontSize: 16, fontWeight: 'bold', color: colors.textDark, marginBottom: 10 },
-  benefitRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  benefitText: { fontSize: 14, color: colors.textDark, marginLeft: 8 },
-  
-  // Estilos do Modal (Pop-up)
+  emptyText: { textAlign: 'center', color: colors.textGray, marginVertical: 10 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: 'white', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, minHeight: 300 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textDark, marginBottom: 20, textAlign: 'center' },
@@ -206,5 +253,5 @@ const styles = StyleSheet.create({
   userOptionText: { fontSize: 18, color: colors.textDark, marginLeft: 15, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 10 },
   addUserOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'center' },
-  addUserText: { fontSize: 16, color: colors.primaryGreen, fontWeight: 'bold', marginLeft: 10 }
+  addUserText: { fontSize: 16, color: colors.primaryGreen, fontWeight: 'bold', marginLeft: 10 },
 });
