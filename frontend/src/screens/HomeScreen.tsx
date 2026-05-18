@@ -1,39 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ImageBackground, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
   Image,
-  Dimensions 
+  Dimensions
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width } = Dimensions.get('window');
 
-// Adicionamos 'route' e 'navigation' para podermos ler os parâmetros e limpá-los
 export default function HomeScreen({ route, navigation }: any) {
-  // Estado que controla se o panda está comendo ou não
   const [isEating, setIsEating] = useState(false);
+  const [petName, setPetName] = useState('');
 
-  // Fica de olho nos parâmetros que chegam pela navegação
+  const fetchPetName = async () => {
+    try {
+      const idAtivo = await AsyncStorage.getItem('idAtivo');
+      const tipo = await AsyncStorage.getItem('tipo');
+      const idResponsavel = await AsyncStorage.getItem('idPaciente');
+
+      if (!idAtivo) return;
+
+      if (tipo === 'filho') {
+        const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        return;
+      }
+
+      if (tipo === 'responsavel') {
+        if (idAtivo && idAtivo !== idResponsavel) {
+          const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data?.nome) setPetName(data.nome);
+        } else {
+          const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
+          if (!response.ok) return;
+          const dependents = await response.json();
+          if (dependents.length === 0) {
+            setPetName('Sem mascote');
+            return;
+          }
+          if (dependents[0].nomemascote) {
+            setPetName(dependents[0].nomemascote);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Erro ao buscar nome do pet:', error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPetName();
+    }, [])
+  );
+
   useEffect(() => {
-    // Se o parâmetro "feedPanda" for verdadeiro...
     if (route.params?.feedPanda) {
-      setIsEating(true); // Troca para o panda comendo
+      setIsEating(true);
 
-      // Inicia um cronômetro de 6 segundos (6000 milissegundos)
       const timer = setTimeout(() => {
-        setIsEating(false); // Volta a ser o panda feliz
-        
-        // Limpa o parâmetro para não rodar a animação de novo se o usuário sair e voltar pra tela
+        setIsEating(false);
         navigation.setParams({ feedPanda: undefined });
       }, 6000);
 
-      // Limpeza de segurança caso a tela seja fechada antes dos 6 segundos
       return () => clearTimeout(timer);
     }
-  }, [route.params?.feedPanda]); // Só roda esse efeito se o parâmetro mudar
+  }, [route.params?.feedPanda]);
 
   return (
     <ImageBackground 
@@ -43,7 +86,7 @@ export default function HomeScreen({ route, navigation }: any) {
       <View style={styles.container}>
         
         <View style={styles.healthCard}>
-          <Text style={styles.petName}>[nome_pet]</Text>
+          <Text style={styles.petName}>{petName}</Text>
           
           <View style={styles.barContainer}>
             <Text style={styles.barLabel}>Carboidrato</Text>
@@ -68,7 +111,6 @@ export default function HomeScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.petContainer}>
-          {/* Lógica condicional: Se isEating for true, mostra a foto comendo. Se não, a foto feliz */}
           <Image 
             source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
             style={styles.pandaImage}

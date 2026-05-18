@@ -31,6 +31,14 @@ export default function ProfileScreen({ navigation }: any) {
       const idResponsavel = await AsyncStorage.getItem("idPaciente");
       const nomeResponsavel = await AsyncStorage.getItem("nome");
 
+      if (idResponsavel) {
+        await AsyncStorage.setItem('idResponsavel', idResponsavel);
+        const idAtivo = await AsyncStorage.getItem('idAtivo');
+        if (!idAtivo) {
+          await AsyncStorage.setItem('idAtivo', idResponsavel);
+        }
+      }
+
       if (nomeResponsavel) {
         setParentName(nomeResponsavel);
         // Só define currentUser como responsável se ainda não foi trocado. se não estiver como quero. pedir para buscar com o usuário do responsável que fez o login
@@ -40,7 +48,6 @@ export default function ProfileScreen({ navigation }: any) {
       if (idResponsavel) {
         const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
         const data = await response.json();
-
         if (response.ok) {
           setDependents(data);
         }
@@ -58,10 +65,22 @@ export default function ProfileScreen({ navigation }: any) {
     }, [])
   );
 
-  const handleSwitchUser = (name: string, isParent: boolean) => {
+  const handleSwitchUser = async (name: string, isParent: boolean, idFilho?: number) => {
     setCurrentUser(isParent ? `${name} (Responsavel)` : name);
     setModalVisible(false);
+
+    if (isParent) {
+      const idResponsavel = await AsyncStorage.getItem('idResponsavel');
+      if (idResponsavel) {
+        await AsyncStorage.setItem('idAtivo', idResponsavel);
+      }
+    } else {
+      if (idFilho) {
+        await AsyncStorage.setItem('idAtivo', String(idFilho));
+      }
+    }
   };
+
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -178,7 +197,7 @@ export default function ProfileScreen({ navigation }: any) {
                 <TouchableOpacity 
                   key={index} 
                   style={styles.userOption} 
-                  onPress={() => handleSwitchUser(dep.nomefilho, false)}
+                  onPress={() => handleSwitchUser(dep.nomefilho, false, dep.idpaciente)}
                 >
                   <Image 
                     source={require('../assets/happy_panda.png')} 
