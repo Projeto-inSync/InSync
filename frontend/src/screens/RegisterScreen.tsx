@@ -1,52 +1,107 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Alert
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors } from '../theme/colors';
+import { registerStyles } from '../theme/registerStyles';
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
 export default function RegisterScreen({ navigation }: Props) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleContinue = () => {
-   if (email.trim() === '' || password.trim() === '') {
-      Alert.alert('Atenção', 'Preencha os dados para começar sua jornada.');
+  const handleContinue = async () => {
+    if (name.trim() === '' || email.trim() === '' || password.trim() === '') {
+      Alert.alert('Atenção', 'Preencha todos os campos para continuar.');
       return;
     }
-    // Levando o usuário para a seleção de perfil!
-    navigation.navigate('ProfileSelection');
+
+    const emailRegex = /\S+\.\S+/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('E-mail inválido', 'Por favor, insira um e-mail em formato correto.');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Senha fraca', 'A senha deve ter pelo menos 6 caracteres.')
+      return;
+    }
+
+    setLoading(true);
+
+    // chama o backend
+    try {
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nome: name,
+          email: email,
+          senha: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro no cadastro', data.detail || 'Tente novamente.');
+        return;
+      }
+
+      navigation.replace('HomeTab');
+
+    } catch (error) {
+      Alert.alert('Erro de conexão', 'Não foi possível conectar ao servidor.')
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <ImageBackground 
-      source={require('../assets/background_bamboo.png')} 
-      style={styles.background}
+    <ImageBackground
+      source={require('../assets/background_bamboo.png')}
+      style={registerStyles.background}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={registerStyles.container}
       >
-        <View style={styles.card}>
-          <Text style={styles.title}>Comece sua jornada</Text>
+        <View style={registerStyles.card}>
+          <Text style={registerStyles.title}>Comece sua jornada</Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>E-mail:</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="insira seu e-mail"
+          <View style={registerStyles.inputContainer}>
+            <Text style={registerStyles.label}>Nome</Text>
+            <TextInput
+              style={registerStyles.input}
+              placeholder="Insira seu nome"
+              placeholderTextColor="#999"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          <View style={registerStyles.inputContainer}>
+            <Text style={registerStyles.label}>E-mail:</Text>
+            <TextInput
+              style={registerStyles.input}
+              placeholder="Insira seu e-mail"
+              placeholderTextColor="#999"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -54,31 +109,31 @@ export default function RegisterScreen({ navigation }: Props) {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Senha:</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="defina sua senha"
+          <View style={registerStyles.inputContainer}>
+            <Text style={registerStyles.label}>Senha:</Text>
+            <TextInput
+              style={registerStyles.input}
+              placeholder="Insira sua senha"
+              placeholderTextColor="#999"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry 
+              secureTextEntry
             />
           </View>
 
-          <TouchableOpacity 
-            style={styles.button}
+          <TouchableOpacity
+            style={[registerStyles.button, loading && { opacity: 0.6 }]}
             onPress={handleContinue}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>Continuar</Text>
+            <Text style={registerStyles.buttonText}>{loading ? 'Cadastrando' : 'Continuar'}</Text>
           </TouchableOpacity>
-
-          {/* Botão para voltar ao Login caso o usuário tenha clicado sem querer */}
-          <TouchableOpacity 
-            style={styles.linkContainer}
+          <TouchableOpacity
+            style={registerStyles.linkContainer}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.linkText}>
-              Já tem uma conta? <Text style={styles.linkTextBold}>Entre aqui!</Text>
+            <Text style={registerStyles.linkText}>
+              Já tem uma conta? <Text style={registerStyles.linkTextBold}>Entre aqui!</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -86,79 +141,3 @@ export default function RegisterScreen({ navigation }: Props) {
     </ImageBackground>
   );
 }
-
-const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    resizeMode: 'cover',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-    width: '100%',
-    maxWidth: 320,
-    borderRadius: 25, 
-    padding: 30,
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.textDark,
-    marginBottom: 25,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    color: colors.textDark,
-    marginBottom: 5,
-    fontWeight: '500',
-  },
-  input: {
-    width: '100%',
-    height: 45,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#FAFAFA',
-  },
-  button: {
-    backgroundColor: colors.primaryGreen,
-    width: '100%',
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  linkContainer: {
-    marginTop: 20,
-  },
-  linkText: {
-    color: colors.textDark,
-    fontSize: 13,
-  },
-  linkTextBold: {
-    fontWeight: 'bold',
-    color: colors.primaryGreen,
-  }
-});

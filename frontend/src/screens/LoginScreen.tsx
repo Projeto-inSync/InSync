@@ -12,29 +12,52 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    if (email.trim() === '' || password.trim() === '') {
-      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha para entrar no InSync.');
+  const handleLogin = async () => {
+    if (login.trim() === '' || password.trim() === '') {
+      Alert.alert('Atenção', 'Por favor, preencha todos os campos para entrar no InSync.');
       return; 
     }
 
-    // A MÁGICA ACONTECE AQUI:
-    if (email.trim().toLowerCase() === '@admin') {
-      navigation.navigate('Admin');
-      return;
-    }
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          login: login,
+          senha:password,
+        }),
+      });
 
-    // Se for um usuário normal, vai para a Home
-    navigation.navigate('HomeTab');
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Erro', data.detail);
+        return; 
+      }
+
+      if (data.user.tipo === 'admin') {
+        navigation.navigate('Admin');
+        return;
+      }
+
+      navigation.navigate('HomeTab');
+
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    }
   };
 
   return (
@@ -50,13 +73,13 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.title}>Bem-vindo</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>E-mail:</Text>
+            <Text style={styles.label}>E-mail ou Username:</Text>
             <TextInput 
               style={styles.input}
-              placeholder="insira seu e-mail"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              placeholder="insira seu e-mail ou username"
+              value={login}
+              onChangeText={setLogin}
+              // keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>

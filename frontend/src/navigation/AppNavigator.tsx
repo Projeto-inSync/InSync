@@ -5,14 +5,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 // 1. Importação de todas as nossas telas
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import ProfileSelectionScreen from '../screens/ProfileSelectionScreen';
+// import ProfileSelectionScreen from '../screens/ProfileSelectionScreen';
 import ChildRegisterScreen from '../screens/ChildRegisterScreen';
 import ResponsibleRegisterScreen from '../screens/ResponsibleRegisterScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import FoodResultScreen from '../screens/FoodResultScreen'; // <-- A tela que estava faltando no mapa!
 import PaymentScreen from '../screens/PaymentScreen';
 import AdminScreen from '../screens/AdminScreen';
-// Importação do nosso Menu Inferior (que contém a Home, Perfil, etc)
 import TabNavigator from './TabNavigator';
 import AddDependentScreen from '../screens/AddDependentScreen';
 
@@ -29,7 +28,7 @@ export default function AppNavigator() {
         {/* Fluxo de Autenticação */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} />
+        {/* <Stack.Screen name="ProfileSelection" component={ProfileSelectionScreen} /> */}
         <Stack.Screen name="ChildRegister" component={ChildRegisterScreen} />
         <Stack.Screen name="ResponsibleRegister" component={ResponsibleRegisterScreen} />
         
