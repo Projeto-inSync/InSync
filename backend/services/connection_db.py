@@ -14,7 +14,6 @@ class User(BaseModel):
     senha: str
 
 class Child(BaseModel):
-    nome: str
     username: str
     senha: str
     idResponsavel: str
@@ -41,7 +40,6 @@ def get_db_connection():
     except OperationalError as err:
         raise HTTPException(status_code=400, detail=f"Erro ao conectar no banco: {str(err)}")
 
-# revisar esse ponto aqui
 def register_user_service(user: User):
     conn = None
     cursor = None
@@ -83,8 +81,11 @@ def register_user_service(user: User):
         if conn:
             conn.close()
     
-#importar essa nova função(create_child_service) no início do main
+#revisar
 def create_child_service(child: Child):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -101,28 +102,41 @@ def create_child_service(child: Child):
         )
 
         cursor.execute(query, (
-            child.nome,
+            child.username,
             child.username,
             hashed_password.decode('utf-8'),
             child.idResponsavel
         ))
 
         id_child = cursor.fetchone()[0]
-
         conn.commit()
-        cursor.close()
-        conn.close()
-
+    
         return {
             "success": True,
             "message": "Filho criado com sucesso",
             "idPaciente": id_child
         }
+    except pg_errors.UniqueViolation:
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=409, detail="Este username já está em uso.")
     
     except Exception as err:
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    
 def add_character_name_service(character: Character):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -135,9 +149,6 @@ def add_character_name_service(character: Character):
         cursor.execute(query, (character.idPaciente, character.nome))
         conn.commit()
 
-        cursor.close()
-        conn.close()
-
         return {
             "success": True,
             "message": "Nome do personagem adicionado com sucesso",
@@ -146,7 +157,15 @@ def add_character_name_service(character: Character):
         }
     
     except Exception as err:
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
     
 def login_user_service(login: str, senha: str):
     conn = None
@@ -200,7 +219,6 @@ def login_user_service(login: str, senha: str):
     
     except HTTPException:
         raise
-
     except Exception as err:
         raise HTTPException(
             status_code=400, detail=str(err))
@@ -208,11 +226,13 @@ def login_user_service(login: str, senha: str):
     finally:
         if cursor:
             cursor.close()
-
         if conn:
             conn.close()
 
 def save_status_to_db(id_paciente, status_data):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -239,14 +259,22 @@ def save_status_to_db(id_paciente, status_data):
         cursor.execute(query, data)
         conn.commit()
 
-        cursor.close()
-        conn.close()
-
     except Exception as err:
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 def get_character_status(id_paciente: int):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -260,19 +288,24 @@ def get_character_status(id_paciente: int):
         cursor.execute(query, (id_paciente,))
         status = cursor.fetchone()
 
-        cursor.close()
-        conn.close()
-
         if not status:
             raise HTTPException(status_code=404, detail="Status do personagem não encontrado")
-
         return status
 
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 def add_mission_service(id_paciente: int, missao1: int, missao2: int, missao3: int, missao4: int):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -285,9 +318,6 @@ def add_mission_service(id_paciente: int, missao1: int, missao2: int, missao3: i
         cursor.execute(query, (id_paciente, missao1, missao2, missao3, missao4))
         conn.commit()
 
-        cursor.close()
-        conn.close()
-
         return {
             "success": True,
             "message": "Missões adicionadas com sucesso",
@@ -295,10 +325,21 @@ def add_mission_service(id_paciente: int, missao1: int, missao2: int, missao3: i
         }
 
     except Exception as err:
+        if conn:
+            conn.rollback()
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 def get_missions_service(id_paciente: int):
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -312,9 +353,6 @@ def get_missions_service(id_paciente: int):
         cursor.execute(query, (id_paciente,))
         result = cursor.fetchone()
 
-        cursor.close()
-        conn.close()
-
         if result:
             return result
         else:
@@ -323,7 +361,16 @@ def get_missions_service(id_paciente: int):
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
     
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
 def get_admin_stats_service():
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -346,9 +393,6 @@ def get_admin_stats_service():
         """)
         total_filhos = cursor.fetchone()[0]
 
-        cursor.close()
-        conn.close()
-
         return {
             "totalAtivos": total_ativos,
             "totalResponsaveis": total_reponsaveis,
@@ -358,7 +402,16 @@ def get_admin_stats_service():
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
     
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+    
 def get_monthly_registrations_service():
+    conn = None
+    cursor = None
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -375,8 +428,6 @@ def get_monthly_registrations_service():
         """)
 
         rows = cursor.fetchall()
-        cursor.close()
-        conn.close()
 
         labels = [row[0] for row in rows]
         data = [row[1] for row in rows]
@@ -388,3 +439,37 @@ def get_monthly_registrations_service():
     
     except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def get_dependents_service(id_responsavel: str):
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        query = """
+            SELECT p.idPaciente, p.username as nomeFilho, c.nome as nomeMoscote
+            FROM Paciente p
+            LEFT JOIN Personagem c ON p.idPaciente = c.idPaciente
+            WHERE p.idResponsavel = %s AND p.tipo = 'filho'
+        """
+
+        cursor.execute(query, (id_responsavel,))
+        dependents = cursor.fetchall()
+        return dependents
+    
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
