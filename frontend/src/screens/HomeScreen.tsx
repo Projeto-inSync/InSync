@@ -18,6 +18,11 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ route, navigation }: any) {
   const [isEating, setIsEating] = useState(false);
   const [petName, setPetName] = useState('');
+  const [petStatus, setPetStatus] = useState({
+    carboidrato: 0,
+    glicemia: 0,
+    proteina: 0,
+  });
 
   const fetchPetName = async () => {
     try {
@@ -27,35 +32,35 @@ export default function HomeScreen({ route, navigation }: any) {
 
       if (!idAtivo) return;
 
-      if (tipo === 'filho') {
-        const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data?.nome) setPetName(data.nome);
-        return;
-      }
+      let idParaBuscar = idAtivo;
 
-      if (tipo === 'responsavel') {
-        if (idAtivo && idAtivo !== idResponsavel) {
-          const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
-          if (!response.ok) return;
-          const data = await response.json();
-          if (data?.nome) setPetName(data.nome);
-        } else {
-          const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
-          if (!response.ok) return;
-          const dependents = await response.json();
-          if (dependents.length === 0) {
-            setPetName('Sem mascote');
-            return;
-          }
-          if (dependents[0].nomemascote) {
-            setPetName(dependents[0].nomemascote);
-          }
+      if (tipo === 'responsavel' && idAtivo === idResponsavel) {
+        const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
+        if (!response.ok) return;
+        const dependents = await response.json();
+        if (dependents.length === 0) {
+          setPetName('Sem mascote');
+          return;
+        }
+        idParaBuscar = String(dependents[0].idpaciente);
+        if (dependents[0].nomemascote) {
+          setPetName(dependents[0].nomemascote);
         }
       }
+
+      // Busca o status do personagem
+      const response = await fetch(`${API_URL}/character-status/${idParaBuscar}`);
+      if (!response.ok) return;
+      const data = await response.json();
+
+      if (data?.nome) setPetName(data.nome);
+      setPetStatus({
+        carboidrato: data.carboidrato ?? 0,
+        glicemia: data.glicemia ?? 0,
+        proteina: data.proteina ?? 0,
+      });
     } catch (error) {
-      console.log('Erro ao buscar nome do pet:', error);
+      console.log('Erro ao buscar dados do pet:', error);
     }
   };
 
@@ -79,40 +84,58 @@ export default function HomeScreen({ route, navigation }: any) {
   }, [route.params?.feedPanda]);
 
   return (
-    <ImageBackground 
-      source={require('../assets/background_bamboo.png')} 
+    <ImageBackground
+      source={require('../assets/background_bamboo.png')}
       style={styles.background}
     >
       <View style={styles.container}>
-        
+
         <View style={styles.healthCard}>
           <Text style={styles.petName}>{petName}</Text>
-          
+
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Carboidrato</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Carboidrato</Text>
+              <Text style={styles.barValue}>{petStatus.carboidrato}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '80%', backgroundColor: colors.lightGreen }]} />
+              <View style={[styles.barFill, {
+                width: `${petStatus.carboidrato}%`,
+                backgroundColor: colors.lightGreen
+              }]} />
             </View>
           </View>
 
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Glicemia</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Glicemia</Text>
+              <Text style={styles.barValue}>{petStatus.glicemia}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '60%', backgroundColor: '#FFA000' }]} />
+              <View style={[styles.barFill, {
+                width: `${petStatus.glicemia}%`,
+                backgroundColor: '#FFA000'
+              }]} />
             </View>
           </View>
 
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Proteína</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Proteína</Text>
+              <Text style={styles.barValue}>{petStatus.proteina}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '30%', backgroundColor: '#E53935' }]} />
+              <View style={[styles.barFill, {
+                width: `${petStatus.proteina}%`,
+                backgroundColor: '#E53935'
+              }]} />
             </View>
           </View>
         </View>
 
         <View style={styles.petContainer}>
-          <Image 
-            source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
+          <Image
+            source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')}
             style={styles.pandaImage}
           />
         </View>
@@ -132,7 +155,9 @@ const styles = StyleSheet.create({
   },
   petName: { fontSize: 22, fontWeight: 'bold', color: colors.primaryGreen, textAlign: 'center', marginBottom: 15 },
   barContainer: { marginBottom: 12 },
-  barLabel: { fontSize: 12, fontWeight: 'bold', color: colors.textDark, marginBottom: 5 },
+  barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  barLabel: { fontSize: 12, fontWeight: 'bold', color: colors.textDark },
+  barValue: { fontSize: 12, fontWeight: 'bold', color: colors.textGray },
   barBackground: { width: '100%', height: 12, backgroundColor: '#EEEEEE', borderRadius: 6, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
   petContainer: { position: 'absolute', bottom: 0, width: '100%', alignItems: 'center', marginBottom: 50 },
