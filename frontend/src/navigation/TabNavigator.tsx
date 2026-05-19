@@ -42,7 +42,7 @@ export default function TabNavigator() {
 
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName='Home'
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primaryGreen,
@@ -70,34 +70,18 @@ export default function TabNavigator() {
         }}
       />
 
-      <Tab.Screen
-        name="CalendarTab"
-        component={CalendarScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="calendar" color={color} size={scale(24)} />
-          ),
-        }}
+      {/* 3. Home (A Casa do Panda) */}
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen} 
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size + 2} /> }}
       />
-
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" color={color} size={scale(24)} />
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person" color={color} size={scale(24)} />
-          ),
-        }}
+      
+      {/* 4. Perfil */}
+      <Tab.Screen 
+        name="ProfileTab" 
+        component={ProfileScreen} 
+        options={{ tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size + 2} /> }}
       />
 
       <Tab.Screen

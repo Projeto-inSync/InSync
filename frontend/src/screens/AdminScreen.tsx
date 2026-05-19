@@ -57,7 +57,6 @@ export default function AdminScreen({ navigation }: Props) {
     }
   };
 
-
   // Dados simulados (Mock) para a visão semestral
   const semesterData = {
     labels: monthlyData.labels.length > 1 ? monthlyData.labels : ["", ...monthlyData.labels],
@@ -145,6 +144,23 @@ export default function AdminScreen({ navigation }: Props) {
 
         {/* NOVA SEÇÃO: Gerenciamento de Usuários */}
         <Text style={styles.sectionTitle}>Gerenciamento de Contas</Text>
+
+        <Text style={styles.sectionTitle}>Novos Cadastros por Mês</Text>
+
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primaryGreen} />
+        ) : (
+          <View style={styles.chartWrapper}>
+            <LineChart
+              data={semesterData}
+              width={screenWidth  - 40}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          </View>
+        )}
         
         <View style={styles.userListContainer}>
           {usersList.map((user) => (

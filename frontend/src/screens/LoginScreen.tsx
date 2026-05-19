@@ -41,8 +41,8 @@ export default function LoginScreen({ navigation }: Props) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          login: login.trim(),
-          senha:password.trim(),
+          login: login,
+          senha:password,
         }),
       });
 
