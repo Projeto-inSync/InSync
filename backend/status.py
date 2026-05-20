@@ -22,7 +22,7 @@ class Status:
     def _print_dados(self):
         print(self.dados)
 
-    def adicionar_cerboidratos(self):
+    def adicionar_carboidratos(self):
         self.dados['carboidrato']   += 3
         self.dados['glicemia']      += 2
         self.dados['xp']            += 6
