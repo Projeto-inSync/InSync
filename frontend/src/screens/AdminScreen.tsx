@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Switch, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
@@ -13,16 +13,16 @@ type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
 
-// Dados mockados simulando o que viria do seu banco de dados (Back-end)
-const MOCK_USERS = [
-  { id: '1', name: 'Carlos Oliveira', email: 'carlos@email.com', plan: 'Pai e Filho', isActive: true },
-  { id: '2', name: 'Ana Souza', email: 'ana@email.com', plan: 'Família', isActive: true },
-  { id: '3', name: 'Roberto Almeida', email: 'roberto@email.com', plan: 'Pai e Filho', isActive: false },
-  { id: '4', name: 'Fernanda Lima', email: 'fernanda@email.com', plan: 'Família', isActive: true },
-];
+interface UserDB {
+  id: number;
+  nome: string;
+  contato: string;
+  tipo: 'responsavel' | 'filho';
+  is_active: boolean;
+}
 
 export default function AdminScreen({ navigation }: Props) {
-  const [usersList, setUsersList] = useState(MOCK_USERS);
+  const [usersList, setUsersList] = useState<UserDB[]>([]);
   const [stats, setStats] = useState({
     totalAtivos: 0,
     totalResponsaveis: 0,
@@ -33,9 +33,11 @@ export default function AdminScreen({ navigation }: Props) {
     data: []
   });
   const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   useEffect(() => {
     fetchStats();
+    fetchUsers();
   }, []);
 
   const fetchStats = async () => {
@@ -57,7 +59,47 @@ export default function AdminScreen({ navigation }: Props) {
     }
   };
 
-  // Dados simulados (Mock) para a visão semestral
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const res = await fetch(`${API_URL}/admin-users`);
+      const data = await res.json();
+      setUsersList(data);
+    } catch (error) {
+      console.error('Erro ao buscar lista de usuários:', error);
+      Alert.alert('Erro', 'Não foi possível carregar a lista de usuários do banco.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const toggleUserStatus = async (id: number, currentStatus: boolean) => {
+    const nextStatus = !currentStatus;
+
+    setUsersList(prevUsers =>
+      prevUsers.map(user => (user.id === id ? { ...user, is_active: nextStatus } : user))
+    );
+
+    try {
+      const response = await fetch(`${API_URL}/admin-users/${id}/toggle`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive: nextStatus }),
+      });
+
+      if (!response.ok) throw new Error('Erro no servidor');
+    fetchStats();
+  } catch (error) {
+    console.error('Erro ao atualizar status:', error);
+    Alert.alert('Erro', 'Não foi possível salvar a alteração.');
+    setUsersList(prevUsers =>
+      prevUsers.map(user => (user.id === id ? { ...user, is_active: currentStatus } : user))
+    );
+  }
+};
+
   const semesterData = {
     labels: monthlyData.labels.length > 1 ? monthlyData.labels : ["", ...monthlyData.labels],
     datasets: [
@@ -80,25 +122,19 @@ export default function AdminScreen({ navigation }: Props) {
     decimalPlaces: 0,
   };
 
-  // Função que inverte o status (Ativo/Inativo) de um usuário específico
-  const toggleUserStatus = (id: string) => {
-    setUsersList(prevUsers => 
-      prevUsers.map(user => 
-        user.id === id ? { ...user, isActive: !user.isActive } : user
-      )
-    );
-  };
-
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       
-      {/* Cabeçalho do Admin */}
+      {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.headerTitle}>Painel Gerencial</Text>
+        
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => navigation.navigate('Login')}
+        >
           <Ionicons name="log-out-outline" size={28} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Painel Gerencial</Text>
-        <Ionicons name="shield-checkmark" size={28} color="white" />
       </View>
 
       <View style={styles.content}>
@@ -108,29 +144,27 @@ export default function AdminScreen({ navigation }: Props) {
         {loading ? (
           <ActivityIndicator size="large" color={colors.primaryGreen} />
         ) : (
-          <View style={styles.statsContainer}>
-            <View style={[styles.statCard, { borderTopColor: '#2196F3', borderTopWidth: 4 }]}>
-              <Ionicons name="people" size={30} color="#2196F3" />
+          <View style={styles.statsContainerVertical}>
+            <View style={[styles.statCardVertical, { borderTopColor: '#2196F3', borderTopWidth: 4 }]}>
+              <Ionicons name="home" size={30} color="#2196F3" />
               <Text style={styles.statValue}>{stats.totalAtivos}</Text>
               <Text style={styles.statLabel}>Usuários Ativos</Text>
             </View>
-            
-            <View style={[styles.statCard, { borderTopColor: colors.primaryGreen, borderTopWidth: 4 }]}>
-              <Ionicons name="person-add" size={30} color={colors.primaryGreen} />
+            <View style={[styles.statCardVertical, { borderTopColor: colors.primaryGreen, borderTopWidth: 4 }]}>
+              <Ionicons name="people" size={30} color={colors.primaryGreen} />
               <Text style={styles.statValue}>{stats.totalResponsaveis}</Text>
               <Text style={styles.statLabel}>Responsáveis</Text>
             </View>
-
-            <View style={[styles.statCard, { borderTopColor: '#FFA000', borderTopWidth: 4 }]}>
-              <Ionicons name="home" size={30} color="#FFA000" />
+            <View style={[styles.statCardVertical, { borderTopColor: '#FFA000', borderTopWidth: 4 }]}>
+              <Ionicons name="person" size={30} color="#FFA000" />
               <Text style={styles.statValue}>{stats.totalFilhos}</Text>
               <Text style={styles.statLabel}>Filhos</Text>
             </View>
+
           </View>
         )}
 
         <Text style={styles.sectionTitle}>Novos Cadastros por Mês</Text>
-        {/* Gráfico de Evolução da Saúde */}
         <View style={styles.chartWrapper}>
           <LineChart
             data={semesterData}
@@ -142,67 +176,49 @@ export default function AdminScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* NOVA SEÇÃO: Gerenciamento de Usuários */}
         <Text style={styles.sectionTitle}>Gerenciamento de Contas</Text>
-
-        <Text style={styles.sectionTitle}>Novos Cadastros por Mês</Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.primaryGreen} />
-        ) : (
-          <View style={styles.chartWrapper}>
-            <LineChart
-              data={semesterData}
-              width={screenWidth  - 40}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-            />
-          </View>
-        )}
         
-        <View style={styles.userListContainer}>
-          {usersList.map((user) => (
-            <View key={user.id} style={[styles.userRow, !user.isActive && styles.userRowInactive]}>
-              
-              <View style={styles.userInfo}>
-                <View style={styles.userIconWrapper}>
-                  <Ionicons name="person" size={20} color={user.isActive ? colors.primaryGreen : '#9E9E9E'} />
-                </View>
-                <View>
-                  <Text style={[styles.userName, !user.isActive && styles.textInactive]}>{user.name}</Text>
-                  <Text style={styles.userDetail}>{user.email} • {user.plan}</Text>
-                </View>
-              </View>
-
-              <View style={styles.switchWrapper}>
-                <Text style={[styles.statusText, { color: user.isActive ? colors.primaryGreen : '#E53935' }]}>
-                  {user.isActive ? 'Ativo' : 'Inativo'}
-                </Text>
-                <Switch
-                  trackColor={{ false: '#FFCDD2', true: '#C8E6C9' }}
-                  thumbColor={user.isActive ? colors.primaryGreen : '#E53935'}
-                  onValueChange={() => toggleUserStatus(user.id)}
-                  value={user.isActive}
-                />
-              </View>
-              
-            </View>
-          ))}
-        </View>
-        {loading ? (
+        {loadingUsers ? (
           <ActivityIndicator size="large" color={colors.primaryGreen} />
         ) : (
-          <View style={styles.chartWrapper}>
-            <LineChart
-              data={semesterData}
-              width={screenWidth  - 40}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-            />
+          <View style={styles.userListContainer}>
+            {usersList.length === 0 ? (
+              <Text style={styles.emptyText}>Nenhum usuário cadastrado.</Text>
+            ) : (
+              usersList.map((user) => (
+                <View key={user.id} style={[styles.userRow, !user.is_active && styles.userRowInactive]}>
+                  
+                  <View style={styles.userInfo}>
+                    <View style={styles.userIconWrapper}>
+                      <Ionicons
+                        name={user.tipo === 'responsavel' ? "people" : "person"}
+                        size={20}
+                        color={user.is_active ? colors.primaryGreen : '#9E9E9E'}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.userName, !user.is_active && styles.textInactive]}>{user.nome}</Text>
+                      <Text style={styles.userDetail} numberOfLines={1}>
+                        {user.contato} • <Text style={styles.typeBadge}>{user.tipo === 'responsavel' ? 'Responsável' : 'Filho'}</Text>
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.switchWrapper}>
+                    <Text style={[styles.statusText, { color: user.is_active ? colors.primaryGreen : '#E53935' }]}>
+                      {user.is_active ? 'Ativo' : 'Inativo'}
+                    </Text>
+                    <Switch
+                      trackColor={{ false: '#FFCDD2', true: '#C8E6C9' }}
+                      thumbColor={user.is_active ? colors.primaryGreen : '#E53935'}
+                      onValueChange={() => toggleUserStatus(user.id, user.is_active)}
+                      value={user.is_active}
+                    />
+                  </View>
+                  
+                </View>
+              ))
+            )}
           </View>
         )}
       </View>
@@ -213,23 +229,33 @@ export default function AdminScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F9F4' },
-  header: { 
+  header: {
     backgroundColor: '#1B5E20',
-    paddingTop: 60, 
-    paddingBottom: 20, 
+    paddingTop: 60,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
+    position: 'relative',
   },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
+  logoutButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 18,
+  },
   content: { padding: 20 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textDark, marginBottom: 15, marginTop: 10 },
-  statsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
-  statCard: { 
+  
+  statsContainerVertical: {
+    flexDirection: 'column',
+    marginBottom: 20
+  },
+  statCardVertical: {
     backgroundColor: 'white',
-    width: '48%',
+    width: '100%',
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
@@ -238,10 +264,10 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 24, fontWeight: '900', color: colors.textDark, marginTop: 10, marginBottom: 5 },
   statLabel: { fontSize: 12, color: colors.textGray, textAlign: 'center' },
+  
   chartWrapper: { alignItems: 'center', backgroundColor: 'white', borderRadius: 20, paddingVertical: 20, elevation: 3, marginBottom: 20 },
   chart: { borderRadius: 16 },
   
-  // Estilos da nova lista de usuários
   userListContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
@@ -267,7 +293,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1, // Faz a área de info ocupar o espaço restante
+    flex: 1,
   },
   userIconWrapper: {
     width: 40,
@@ -288,16 +314,26 @@ const styles = StyleSheet.create({
     color: colors.textGray,
     marginTop: 2,
   },
+  typeBadge: {
+    fontWeight: 'bold',
+    textTransform: 'capitalize',
+  },
   textInactive: {
-    color: '#9E9E9E', // Deixa o nome cinza quando inativo
+    color: '#9E9E9E',
   },
   switchWrapper: {
     alignItems: 'center',
+    marginLeft: 10,
   },
   statusText: {
     fontSize: 10,
     fontWeight: 'bold',
     marginBottom: 2,
     textTransform: 'uppercase',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: colors.textGray,
+    padding: 20,
   }
 });
