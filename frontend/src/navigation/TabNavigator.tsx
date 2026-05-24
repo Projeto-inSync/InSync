@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
 import SettingsScreen from '../screens/SettingsScreen';
 import CameraScreen from '../screens/CameraScreen';
@@ -10,39 +11,40 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 
-//Responsividade
 const { width: SCREEN_W } = Dimensions.get('window');
-
 const scale = (size: number) => (SCREEN_W / 390) * size;
-
 const scaleFont = (size: number) =>
   Math.round(PixelRatio.roundToNearestPixel((SCREEN_W / 390) * size));
-
-// Telas
-const DummyCamera = () => (
-  <View style={styles.dummyContainer}>
-    <Text style={styles.dummyText}>Câmera (Em Breve)</Text>
-  </View>
-);
-const DummyCalendar = () => (
-  <View style={styles.dummyContainer}>
-    <Text style={styles.dummyText}>Calendário (Em Breve)</Text>
-  </View>
-);
-const DummySettings = () => (
-  <View style={styles.dummyContainer}>
-    <Text style={styles.dummyText}>Configurações (Em Breve)</Text>
-  </View>
-);
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
   const insets = useSafeAreaInsets();
+  const [usuarioAtivoTipo, setUsuarioAtivoTipo] = useState<string | null>(null);
+  const [tipoLoginOriginal, setTipoLoginOriginal] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const checkUserType = async () => {
+      const ativoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
+      const loginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
+      setUsuarioAtivoTipo(ativoTipo);
+      setTipoLoginOriginal(loginOriginal);
+      setReady(true);
+    };
+    checkUserType();
+  }, []);
+
+  if (!ready) return null;
+  
+  const isResponsavelAtivo =
+    tipoLoginOriginal === 'responsavel' && usuarioAtivoTipo === 'responsavel';
+
+  const isFilhoAtivo = usuarioAtivoTipo === 'filho';
 
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName={isResponsavelAtivo ? "CalendarTab" : "Home"}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primaryGreen,
@@ -60,35 +62,41 @@ export default function TabNavigator() {
         },
       }}
     >
-      <Tab.Screen
-        name="CameraTab"
-        component={CameraScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="camera" color={color} size={scale(24)} />
-          ),
-        }}
-      />
+      {!isResponsavelAtivo && (
+        <Tab.Screen
+          name="CameraTab"
+          component={CameraScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="camera" color={color} size={scale(24)} />
+            ),
+          }}
+        />
+      )}
 
-      <Tab.Screen
-        name="CalendarTab"
-        component={CalendarScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="calendar" color={color} size={scale(24)} />
-          ),
-        }}
-      />
+      {isResponsavelAtivo && (
+        <Tab.Screen
+          name="CalendarTab"
+          component={CalendarScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="calendar" color={color} size={scale(24)} />
+            ),
+          }}
+        />
+      )}
 
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" color={color} size={scale(24)} />
-          ),
-        }}
-      />
+      {!isResponsavelAtivo && (
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="home" color={color} size={scale(24)} />
+            ),
+          }}
+        />
+      )}
 
       <Tab.Screen
         name="ProfileTab"
@@ -114,15 +122,6 @@ export default function TabNavigator() {
 }
 
 const styles = StyleSheet.create({
-  dummyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F4F9F4',
-  },
-  dummyText: {
-    fontSize: scaleFont(20),
-    fontWeight: 'bold',
-    color: colors.primaryGreen,
-  },
+  dummyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F9F4' },
+  dummyText: { fontSize: scaleFont(20), fontWeight: 'bold', color: colors.primaryGreen },
 });

@@ -1,81 +1,275 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ImageBackground, 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
   Image,
-  Dimensions 
+  Dimensions,
+  Modal,
+  TouchableOpacity,
+  Animated
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-const { width } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
-// Adicionamos 'route' e 'navigation' para podermos ler os parâmetros e limpá-los
+type Conquista = {
+  nome: string;
+  descricao: string;
+  icone: string;
+  cor_fundo: string;
+  cor_icone: string;
+};
+
 export default function HomeScreen({ route, navigation }: any) {
-  // Estado que controla se o panda está comendo ou não
   const [isEating, setIsEating] = useState(false);
+  const [petName, setPetName] = useState('');
+  const [petStatus, setPetStatus] = useState({
+    carboidrato: 0,
+    glicemia: 0,
+    proteina: 0,
+  });
+  const [conquistaModal, setConquistaModal] = useState<Conquista | null>(null);
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const breathAnim = useRef(new Animated.Value(1)).current;
+  const eatScaleAnim = useRef(new Animated.Value(1)).current;
+  const wobbleAnim   = useRef(new Animated.Value(0)).current;
+  const breathLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const eatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fica de olho nos parâmetros que chegam pela navegação
+  const startBreathing = useCallback(() => {
+    breathLoopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, { toValue: 1.06, duration: 1800, useNativeDriver: true }),
+        Animated.timing(breathAnim, { toValue: 1,    duration: 1800, useNativeDriver: true }),
+      ])
+    );
+    breathLoopRef.current.start();
+  }, [breathAnim]);
+
+  const stopBreathing = useCallback(() => {
+    breathLoopRef.current?.stop();
+    breathAnim.setValue(1);
+  }, [breathAnim]);
+
+  const playEatBounce = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(eatScaleAnim, { toValue: 1.15, duration: 120, useNativeDriver: true }),
+      Animated.timing(eatScaleAnim, { toValue: 0.95, duration: 120, useNativeDriver: true }),
+      Animated.timing(eatScaleAnim, { toValue: 1.08, duration: 100, useNativeDriver: true }),
+      Animated.timing(eatScaleAnim, { toValue: 1,    duration: 100, useNativeDriver: true }),
+    ]).start();
+  }, [eatScaleAnim]);
+
+  const playWobble = useCallback(() => {
+    wobbleAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(wobbleAnim, { toValue:  12, duration: 80, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue: -12, duration: 80, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue:  10, duration: 70, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue: -10, duration: 70, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue:   6, duration: 60, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue:  -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(wobbleAnim, { toValue:   0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }, [wobbleAnim]);
+
   useEffect(() => {
-    // Se o parâmetro "feedPanda" for verdadeiro...
+    startBreathing();
+    return () => stopBreathing();
+  }, [startBreathing, stopBreathing]);
+
+  useEffect(() => {
     if (route.params?.feedPanda) {
-      setIsEating(true); // Troca para o panda comendo
+      stopBreathing();
+      setIsEating(true);
+      playEatBounce();
+      playWobble();
 
-      // Inicia um cronômetro de 6 segundos (6000 milissegundos)
-      const timer = setTimeout(() => {
-        setIsEating(false); // Volta a ser o panda feliz
-        
-        // Limpa o parâmetro para não rodar a animação de novo se o usuário sair e voltar pra tela
+      if (eatTimerRef.current) clearTimeout(eatTimerRef.current);
+
+      eatTimerRef.current = setTimeout(() => {
+        setIsEating(false);
+        startBreathing();
         navigation.setParams({ feedPanda: undefined });
-      }, 6000);
+      }, 3000);
 
-      // Limpeza de segurança caso a tela seja fechada antes dos 6 segundos
-      return () => clearTimeout(timer);
+      return () => {
+        if (eatTimerRef.current) clearTimeout(eatTimerRef.current);
+      };
     }
-  }, [route.params?.feedPanda]); // Só roda esse efeito se o parâmetro mudar
+  }, [route.params?.feedPanda]);
+
+  const mostrarConquista = (conquista: Conquista) => {
+    setConquistaModal(conquista);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const fecharConquista = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setConquistaModal(null));
+  };
+
+  const fetchPetName = useCallback(async () => {
+    try {
+      const idPaciente       = await AsyncStorage.getItem('idPaciente');
+      const idAtivo          = await AsyncStorage.getItem('idAtivo');
+      const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
+
+      if (!idAtivo && !idPaciente) return;
+      let idParaBuscar = idAtivo || idPaciente;
+
+      if (usuarioAtivoTipo === 'responsavel' && idParaBuscar === idPaciente) {
+        const depRes = await fetch(`${API_URL}/dependents/${idPaciente}`);
+        if (depRes.ok) {
+          const dependents = await depRes.json();
+          if (dependents.length === 0) { setPetName('Sem mascote'); return; }
+          idParaBuscar = String(dependents[0].idpaciente);
+          await AsyncStorage.setItem('idAtivo', idParaBuscar);
+        }
+      }
+
+      const response = await fetch(`${API_URL}/character-status/${idParaBuscar}`);
+      if (!response.ok) return;
+      const data = await response.json();
+
+      if (data?.nome) setPetName(data.nome);
+      const novaGlicemia = data.glicemia ?? 0;
+      setPetStatus({
+        carboidrato: data.carboidrato ?? 0,
+        glicemia:    novaGlicemia,
+        proteina:    data.proteina    ?? 0,
+      });
+
+      if (usuarioAtivoTipo === 'responsavel' && novaGlicemia > 60) {
+        navigation.navigate('Calendar', {
+          alertaGlicemiaImediato: {
+            idpaciente: data.idpaciente,
+            nomefilho: petName || 'Seu filho',
+            valorGlicemia: novaGlicemia
+          }
+        });
+      }
+    } catch (error) {
+      console.log('Erro ao buscar dados do pet:', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPetName();
+      const interval = setInterval(fetchPetName, 10000);
+      return () => clearInterval(interval);
+    }, [fetchPetName])
+  );
+
+  useEffect(() => {
+    if (route.params?.novasConquistas?.length > 0) {
+      route.params.novasConquistas.forEach((conquista: Conquista, index: number) => {
+        setTimeout(() => mostrarConquista(conquista), index * 3500);
+      });
+      navigation.setParams({ novasConquistas: undefined });
+    }
+  }, [route.params?.novasConquistas]);
+
+  const pandaScale = isEating ? eatScaleAnim : breathAnim;
 
   return (
-    <ImageBackground 
-      source={require('../assets/background_bamboo.png')} 
+    <ImageBackground
+      source={require('../assets/background_bamboo.png')}
       style={styles.background}
     >
       <View style={styles.container}>
-        
+
         <View style={styles.healthCard}>
-          <Text style={styles.petName}>[nome_pet]</Text>
-          
+          <Text style={styles.petName}>{petName}</Text>
+
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Carboidrato</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Carboidrato</Text>
+              <Text style={styles.barValue}>{petStatus.carboidrato}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '80%', backgroundColor: colors.lightGreen }]} />
+              <View style={[styles.barFill, { width: (petStatus.carboidrato / 100) * (screenWidth - 80), backgroundColor: colors.lightGreen }]} />
             </View>
           </View>
 
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Glicemia</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Glicemia</Text>
+              <Text style={styles.barValue}>{petStatus.glicemia}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '60%', backgroundColor: '#FFA000' }]} />
+              <View style={[styles.barFill, { width: (petStatus.glicemia / 100) * (screenWidth - 80), backgroundColor: '#FFA000' }]} />
             </View>
           </View>
 
           <View style={styles.barContainer}>
-            <Text style={styles.barLabel}>Proteína</Text>
+            <View style={styles.barLabelRow}>
+              <Text style={styles.barLabel}>Proteína</Text>
+              <Text style={styles.barValue}>{petStatus.proteina}%</Text>
+            </View>
             <View style={styles.barBackground}>
-              <View style={[styles.barFill, { width: '30%', backgroundColor: '#E53935' }]} />
+              <View style={[styles.barFill, { width: (petStatus.proteina / 100) * (screenWidth - 80), backgroundColor: '#E53935' }]} />
             </View>
           </View>
         </View>
 
         <View style={styles.petContainer}>
-          {/* Lógica condicional: Se isEating for true, mostra a foto comendo. Se não, a foto feliz */}
-          <Image 
-            source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
-            style={styles.pandaImage}
-          />
+          <Animated.View style={{
+            transform: [
+              { scale: pandaScale },
+              { translateX: wobbleAnim },
+            ]
+          }}>
+            <Image
+              source={
+                isEating
+                  ? require('../assets/eating_panda.png')
+                  : require('../assets/happy_panda.png')
+              }
+              style={styles.pandaImage}
+            />
+          </Animated.View>
         </View>
 
       </View>
+
+      <Modal transparent visible={!!conquistaModal} animationType="none">
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.modalCard, { transform: [{ scale: scaleAnim }] }]}>
+            <Text style={styles.modalTitulo}>Conquista Desbloqueada!</Text>
+            {conquistaModal && (
+              <>
+                <View style={[styles.iconCircle, { backgroundColor: conquistaModal.cor_fundo }]}>
+                  <Ionicons name={conquistaModal.icone as any} size={48} color={conquistaModal.cor_icone} />
+                </View>
+                <Text style={styles.modalNome}>{conquistaModal.nome}</Text>
+                <Text style={styles.modalDescricao}>
+                  Parabéns! Você desbloqueou uma nova conquista. Continue assim! 🎉
+                </Text>
+              </>
+            )}
+            <TouchableOpacity style={styles.modalBotao} onPress={fecharConquista}>
+              <Text style={styles.modalBotaoTexto}>Continuar</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -85,14 +279,29 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', paddingTop: 60, paddingHorizontal: 20 },
   healthCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)', width: '100%', borderRadius: 20,
-    padding: 20, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, shadowRadius: 5, zIndex: 1,
+    padding: 20, elevation: 10, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, zIndex: 1,
   },
   petName: { fontSize: 22, fontWeight: 'bold', color: colors.primaryGreen, textAlign: 'center', marginBottom: 15 },
-  barContainer: { marginBottom: 12 },
-  barLabel: { fontSize: 12, fontWeight: 'bold', color: colors.textDark, marginBottom: 5 },
+  barContainer: { marginBottom: 12, width: '100%' },
+  barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  barLabel: { fontSize: 12, fontWeight: 'bold', color: colors.textDark },
+  barValue: { fontSize: 12, fontWeight: 'bold', color: colors.textGray },
   barBackground: { width: '100%', height: 12, backgroundColor: '#EEEEEE', borderRadius: 6, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
   petContainer: { position: 'absolute', bottom: 0, width: '100%', alignItems: 'center', marginBottom: 50 },
-  pandaImage: { width: width * 0.7, height: width * 0.7, resizeMode: 'contain' }
+  pandaImage: { width: screenWidth * 0.7, height: screenWidth * 0.7, resizeMode: 'contain' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: {
+    backgroundColor: 'white', borderRadius: 28, padding: 32,
+    alignItems: 'center', width: screenWidth * 0.82,
+    elevation: 20, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12,
+  },
+  modalTitulo: { fontSize: 20, fontWeight: 'bold', color: colors.textDark, marginBottom: 20, textAlign: 'center' },
+  iconCircle: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 16, elevation: 4 },
+  modalNome: { fontSize: 22, fontWeight: 'bold', color: colors.primaryGreen, marginBottom: 8, textAlign: 'center' },
+  modalDescricao: { fontSize: 14, color: '#757575', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  modalBotao: { backgroundColor: colors.primaryGreen, paddingHorizontal: 36, paddingVertical: 14, borderRadius: 25 },
+  modalBotaoTexto: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });

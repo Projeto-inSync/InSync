@@ -44,7 +44,6 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
 
-    // chama o backend
     try {
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
@@ -68,6 +67,7 @@ export default function RegisterScreen({ navigation }: Props) {
       await AsyncStorage.setItem('idPaciente', String(data.idPaciente));
       await AsyncStorage.setItem('tipo', 'responsavel');
       await AsyncStorage.setItem('nome', name.trim());
+      await AsyncStorage.setItem('idAtivo', String(data.idPaciente));
 
       navigation.replace('HomeTab');
 

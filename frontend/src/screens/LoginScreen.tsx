@@ -41,8 +41,8 @@ export default function LoginScreen({ navigation }: Props) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          login: login.trim(),
-          senha:password.trim(),
+          login: login,
+          senha:password,
         }),
       });
 
@@ -56,6 +56,9 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('idPaciente', String(data.user.idPaciente));
       await AsyncStorage.setItem('tipo', data.user.tipo);
       await AsyncStorage.setItem('nome', data.user.nome);
+      await AsyncStorage.setItem('idAtivo', String(data.user.idPaciente));
+      await AsyncStorage.setItem('usuarioAtivoTipo', data.user.tipo);
+      await AsyncStorage.setItem('tipoLoginOriginal', data.user.tipo);
 
       if (data.user.tipo === 'admin') {
         navigation.navigate('Admin');
@@ -90,7 +93,6 @@ export default function LoginScreen({ navigation }: Props) {
               placeholder="insira seu e-mail ou username"
               value={login}
               onChangeText={setLogin}
-              // keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
