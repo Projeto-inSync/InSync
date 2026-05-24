@@ -226,6 +226,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     resizeMode: "contain",
-    opacity: 0.8, // Deixa a imagem levemente transparente para não roubar a atenção do botão
+    opacity: 0.8,
   },
 });
