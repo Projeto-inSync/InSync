@@ -7,7 +7,6 @@ class Status:
             'carboidrato': 0,
             'glicemia': 0,
             'proteina': 0,
-            'xp': 0,
         }
         self.decaimento_ativo = True
         self.iniciar_decaimento()
@@ -23,68 +22,64 @@ class Status:
         print(self.dados)
 
     def adicionar_carboidratos(self):
-        self.dados['carboidrato']   += 3
-        self.dados['glicemia']      += 2
-        self.dados['xp']            += 6
+        self.dados['carboidrato']   += 15
+        self.dados['glicemia']      += 8
         self._verificar_limites()
 
     def adicionar_frutas(self):
-        self.dados['carboidrato']   += 2
-        self.dados['glicemia']      += 1
-        self.dados['xp']            += 7
+        self.dados['carboidrato']   += 8
+        self.dados['glicemia']      += 5
         self._verificar_limites()
 
     def adicionar_legumes(self):
-        self.dados['carboidrato']   += 1
-        self.dados['proteina']      += 1
-        self.dados['xp']            += 8
+        self.dados['carboidrato']   += 5
+        self.dados['glicemia']      += 2
+        self.dados['proteina']      += 4
         self._verificar_limites()
 
     def adicionar_leite_e_derivados(self):
-        self.dados['proteina']      += 2
-        self.dados['glicemia']      += 1
-        self.dados['xp']            += 7
+        self.dados['carboidrato']   += 3
+        self.dados['glicemia']      += 4
+        self.dados['proteina']      += 10
         self._verificar_limites()
 
     def adicionar_carnes(self):
-        self.dados['proteina']    += 3
-        self.dados['xp']          += 9
+        self.dados['proteina']    += 20
         self._verificar_limites()
 
     def adicionar_leguminosas(self):
-        self.dados['proteina']    += 2
-        self.dados['carboidrato'] += 1
-        self.dados['xp']          += 8
+        self.dados['carboidrato'] += 10
+        self.dados['glicemia']    += 5
+        self.dados['proteina']    += 12
         self._verificar_limites()
 
     def adicionar_oleaginosas(self):
-        self.dados['proteina']    += 2
-        self.dados['xp']          += 7
+        self.dados['carboidrato'] += 2
+        self.dados['glicemia']    += 1
+        self.dados['proteina']    += 12
         self._verificar_limites()
 
     def adicionar_doces(self):
-        self.dados['glicemia']    += 4
-        self.dados['carboidrato'] += 2
-        self.dados['xp']          += 4
+        self.dados['carboidrato'] += 10
+        self.dados['glicemia']    += 35
         self._verificar_limites()
 
-    def adicionar_salgados(self):
-        self.dados['carboidrato'] += 1
-        self.dados['glicemia']    += 1
-        self.dados['xp']          += 3
+    def adicionar_snacks(self):
+        self.dados['carboidrato'] += 8
+        self.dados['glicemia']    += 25
+        self.dados['proteina']    += 2
         self._verificar_limites()
 
     def adicionar_embutidos(self):
-        self.dados['proteina']    += 1
-        self.dados['glicemia']    += 2
-        self.dados['xp']          += 5
+        self.dados['carboidrato'] += 3
+        self.dados['glicemia']    += 10
+        self.dados['proteina']    += 5
         self._verificar_limites()
 
     def decair_status(self):
         while self.decaimento_ativo:
             time.sleep(3600)
             for chave in self.dados:
-                if chave != 'xp':
                     decaimento = self.dados[chave] * 0.05
                     self.dados[chave] = max(0, self.dados[chave] - decaimento)
             self._verificar_limites()
