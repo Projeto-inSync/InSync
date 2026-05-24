@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from services.images_service import process_image_service
@@ -13,18 +13,23 @@ from services.connection_db import (
     get_admin_stats_service,
     get_monthly_registrations_service,
     create_child_service,
-    get_dependents_service
+    get_dependents_service,
+    get_conquistas_service,
+    get_all_users_admin_service,
+    toggle_user_status_service,
+    get_historico_service
 )
 from status import Status
+from services.decay_service import iniciar_decaimento
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permite que qualquer origem (seu front) acesse a API
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"], # Permite todos os métodos (GET, POST, etc)
-    allow_headers=["*"], # Permite todos os headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ImageData(BaseModel):
@@ -44,13 +49,14 @@ class ChildData(BaseModel):
     senha: str
     idResponsavel: str
 
-status = Status()
+pet_status = Status()
+iniciar_decaimento()
 
 @app.post("/process-image")
 async def process_image(data: ImageData):
     try:
-        classification, status_data = process_image_service(data.image_base64, status)
-        return {"classification": classification, "status": status_data}
+        classification, delta = process_image_service(data.image_base64, pet_status)
+        return {"classification": classification, "status": delta}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -100,18 +106,18 @@ class StatusData(BaseModel):
     carboidrato: float
     glicemia: float
     proteina: float
-    xp: int
+    classification: str = ""
 
 @app.post("/save-status")
 async def save_status(status_data: StatusData):
     try:
-        save_status_to_db(status_data.idPaciente, {
+        novas_conquistas = save_status_to_db(status_data.idPaciente, {
             'carboidrato': status_data.carboidrato,
             'glicemia': status_data.glicemia,
             'proteina': status_data.proteina,
-            'xp': status_data.xp
+            'classification': status_data.classification
         })
-        return {"message": "Status saved successfully"}
+        return {"message": "Status saved successfully", "novas_conquistas": novas_conquistas}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -154,6 +160,26 @@ async def get_missions(id_paciente: int):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+@app.get("/conquistas/{id_paciente}")
+async def get_conquistas(id_paciente: int):
+    try:
+        result = get_conquistas_service(id_paciente)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/historico/{id_paciente}")
+async def get_historico(id_paciente: int, periodo: str = Query(default="week", pattern="^(week|month)$"), data_ref: str = Query(default=None)):
+    try:
+        result = get_historico_service(id_paciente, periodo, data_ref)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.get("/admin-stats")
 async def get_admin_stats():
     try:
@@ -171,6 +197,25 @@ async def get_monthly_registrations():
         return result
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+class ToggleStatusData(BaseModel):
+    isActive: bool
+
+@app.get("/admin-users")
+async def get_admin_users():
+    try:
+        result = get_all_users_admin_service()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/admin-users/{user_id}/toggle")
+async def toggle_user_status(user_id: int, data: ToggleStatusData):
+    try:
+        result = toggle_user_status_service(user_id, data.isActive)
+        return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
