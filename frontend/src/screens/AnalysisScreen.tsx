@@ -1,3 +1,4 @@
+//tela de carregamento da análise do alimento
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -5,6 +6,7 @@ import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type RootStackParamList = {
   Analysis: { imageBase64: string };
