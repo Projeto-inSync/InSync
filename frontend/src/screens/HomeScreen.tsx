@@ -7,33 +7,52 @@ import {
   Image,
   Dimensions 
 } from 'react-native';
+import { Audio } from 'expo-av'; // Importação do áudio
 import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
-// Adicionamos 'route' e 'navigation' para podermos ler os parâmetros e limpá-los
 export default function HomeScreen({ route, navigation }: any) {
-  // Estado que controla se o panda está comendo ou não
   const [isEating, setIsEating] = useState(false);
 
-  // Fica de olho nos parâmetros que chegam pela navegação
   useEffect(() => {
-    // Se o parâmetro "feedPanda" for verdadeiro...
-    if (route.params?.feedPanda) {
-      setIsEating(true); // Troca para o panda comendo
+    let timer: NodeJS.Timeout;
+    let soundObject: Audio.Sound | null = null;
 
-      // Inicia um cronômetro de 6 segundos (6000 milissegundos)
-      const timer = setTimeout(() => {
-        setIsEating(false); // Volta a ser o panda feliz
-        
-        // Limpa o parâmetro para não rodar a animação de novo se o usuário sair e voltar pra tela
-        navigation.setParams({ feedPanda: undefined });
-      }, 6000);
+    const handleFeeding = async () => {
+      if (route.params?.feedPanda) {
+        setIsEating(true); // Troca para o panda comendo
 
-      // Limpeza de segurança caso a tela seja fechada antes dos 6 segundos
-      return () => clearTimeout(timer);
-    }
-  }, [route.params?.feedPanda]); // Só roda esse efeito se o parâmetro mudar
+        // 1. Carrega e toca o áudio instantaneamente
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            require('../assets/mastigando.mp3') // Caminho corrigido!
+          );
+          soundObject = sound;
+          await sound.playAsync();
+        } catch (error) {
+          console.error('Erro ao tocar o som do panda:', error);
+        }
+
+        // 2. Cronômetro de 6 segundos da animação
+        // O áudio tem 4s, então ele vai terminar naturalmente um pouco antes da imagem voltar ao normal
+        timer = setTimeout(() => {
+          setIsEating(false); // Volta a ser o panda feliz
+          navigation.setParams({ feedPanda: undefined });
+        }, 6000);
+      }
+    };
+
+    handleFeeding();
+
+    // 3. Limpeza de segurança caso a tela seja fechada
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (soundObject) {
+        soundObject.unloadAsync(); // Limpa o áudio da memória
+      }
+    };
+  }, [route.params?.feedPanda]);
 
   return (
     <ImageBackground 
@@ -68,7 +87,6 @@ export default function HomeScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.petContainer}>
-          {/* Lógica condicional: Se isEating for true, mostra a foto comendo. Se não, a foto feliz */}
           <Image 
             source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
             style={styles.pandaImage}
