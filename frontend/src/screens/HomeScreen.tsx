@@ -13,8 +13,10 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
 import { API_URL } from '@env';
+import { isSoundEnabled } from '../utils/SoundManager';
 // const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,6 +44,7 @@ export default function HomeScreen({ route, navigation }: any) {
   const wobbleAnim   = useRef(new Animated.Value(0)).current;
   const breathLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const eatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eatSoundRef = useRef<Audio.Sound | null>(null);
 
   const startBreathing = useCallback(() => {
     breathLoopRef.current = Animated.loop(
@@ -80,30 +83,65 @@ export default function HomeScreen({ route, navigation }: any) {
     ]).start();
   }, [wobbleAnim]);
 
+  const playPandaSound = async () => {
+    try {
+      if (!isSoundEnabled) return;
+      const { sound } = await Audio.Sound.createAsync(
+        require('../assets/panda_sound.mp3')
+      );
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Erro ao tocar o som interativo do panda:', error);
+    }
+  };
+
   useEffect(() => {
     startBreathing();
     return () => stopBreathing();
   }, [startBreathing, stopBreathing]);
 
   useEffect(() => {
-    if (route.params?.feedPanda) {
-      stopBreathing();
-      setIsEating(true);
-      playEatBounce();
-      playWobble();
+    if (!route.params?.feedPanda) return;
 
+    stopBreathing();
+    setIsEating(true);
+    playEatBounce();
+    playWobble();
+
+    const playEatSound = async () => {
+      try {
+        if (!isSoundEnabled) return;
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/mastigando.mp3')
+        );
+        eatSoundRef.current = sound;
+        await sound.playAsync();
+      } catch (error) {
+        console.error('Erro ao tocar o som do panda comendo:', error);
+      }
+    };
+    playEatSound();
+
+    if (eatTimerRef.current) clearTimeout(eatTimerRef.current);
+
+    eatTimerRef.current = setTimeout(() => {
+      setIsEating(false);
+      startBreathing();
+      navigation.setParams({ feedPanda: undefined });
+      eatSoundRef.current?.unloadAsync();
+      eatSoundRef.current = null;
+    }, 3000);
+
+    return () => {
       if (eatTimerRef.current) clearTimeout(eatTimerRef.current);
-
-      eatTimerRef.current = setTimeout(() => {
-        setIsEating(false);
-        startBreathing();
-        navigation.setParams({ feedPanda: undefined });
-      }, 3000);
-
-      return () => {
-        if (eatTimerRef.current) clearTimeout(eatTimerRef.current);
-      };
-    }
+      eatSoundRef.current?.unloadAsync();
+      eatSoundRef.current = null;
+    };
   }, [route.params?.feedPanda]);
 
   const mostrarConquista = (conquista: Conquista) => {
@@ -126,8 +164,8 @@ export default function HomeScreen({ route, navigation }: any) {
 
   const fetchPetName = useCallback(async () => {
     try {
-      const idPaciente       = await AsyncStorage.getItem('idPaciente');
-      const idAtivo          = await AsyncStorage.getItem('idAtivo');
+      const idPaciente = await AsyncStorage.getItem('idPaciente');
+      const idAtivo = await AsyncStorage.getItem('idAtivo');
       const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
 
       if (!idAtivo && !idPaciente) return;
@@ -191,6 +229,65 @@ export default function HomeScreen({ route, navigation }: any) {
   }, [route.params?.novasConquistas]);
 
   const pandaScale = isEating ? eatScaleAnim : breathAnim;
+  // Função para tocar o som ao clicar no panda
+  // const playPandaSound = async () => {
+  //   try {
+  //     // 2. Trava de som: Se estiver desligado, sai da função antes de carregar o áudio
+  //     if (!isSoundEnabled) return;
+
+  //     const { sound } = await Audio.Sound.createAsync(
+  //       require('../assets/panda_sound.mp3') 
+  //     );
+      
+  //     sound.setOnPlaybackStatusUpdate((status) => {
+  //       if (status.isLoaded && status.didJustFinish) {
+  //         sound.unloadAsync();
+  //       }
+  //     });
+
+  //     await sound.playAsync();
+  //   } catch (error) {
+  //     console.error('Erro ao tocar o som interativo do panda:', error);
+  //   }
+  // };
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    let soundObject: Audio.Sound | null = null;
+
+    const handleFeeding = async () => {
+      if (route.params?.feedPanda) {
+        setIsEating(true);
+
+        try {
+          // 3. Trava de som: Só carrega e toca o som de mastigar se estiver ativado
+          if (isSoundEnabled) {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../assets/mastigando.mp3')
+            );
+            soundObject = sound;
+            await sound.playAsync();
+          }
+        } catch (error) {
+          console.error('Erro ao tocar o som do panda comendo:', error);
+        }
+
+        timer = setTimeout(() => {
+          setIsEating(false); 
+          navigation.setParams({ feedPanda: undefined });
+        }, 3000);
+      }
+    };
+
+    handleFeeding();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (soundObject) {
+        soundObject.unloadAsync();
+      }
+    };
+  }, [route.params?.feedPanda]);
 
   return (
     <ImageBackground
@@ -240,14 +337,13 @@ export default function HomeScreen({ route, navigation }: any) {
               { translateX: wobbleAnim },
             ]
           }}>
-            <Image
-              source={
-                isEating
-                  ? require('../assets/eating_panda.png')
-                  : require('../assets/happy_panda.png')
-              }
-              style={styles.pandaImage}
-            />
+            {/* ✅ TouchableOpacity integrado na imagem do panda — sem duplicação */}
+            <TouchableOpacity activeOpacity={0.8} onPress={playPandaSound}>
+              <Image
+                source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')}
+                style={styles.pandaImage}
+              />
+            </TouchableOpacity>
           </Animated.View>
         </View>
 

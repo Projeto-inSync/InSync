@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-// Adicionamos { navigation }: any para a tela ter acesso ao GPS do app
+// Importamos os gerenciadores de áudio globais
+import { toggleBackgroundMusic } from '../utils/MusicPlayer'; 
+import { isSoundEnabled, toggleSoundEffects } from '../utils/SoundManager'; // <-- Nova importação
+
 export default function SettingsScreen({ navigation }: any) {
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  // O estado inicial agora lê a variável global para manter a consistência
+  const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled);
   const [musicEnabled, setMusicEnabled] = useState(true);
+
+  // Efeito que dispara sempre que a chavinha da música for alternada
+  useEffect(() => {
+    toggleBackgroundMusic(musicEnabled);
+  }, [musicEnabled]);
+
+  // Função que atualiza a tela e a variável global ao mesmo tempo
+  const handleSoundToggle = (value: boolean) => {
+    setSoundEnabled(value); // Atualiza o visual da chavinha
+    toggleSoundEffects(value); // Desliga/Liga os sons no resto do app
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -32,7 +47,7 @@ export default function SettingsScreen({ navigation }: any) {
               <Switch
                 trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
                 thumbColor={soundEnabled ? colors.primaryGreen : '#FAFAFA'}
-                onValueChange={setSoundEnabled}
+                onValueChange={handleSoundToggle} // <-- Alterado para usar a nossa nova função
                 value={soundEnabled}
               />
             </View>
@@ -56,12 +71,11 @@ export default function SettingsScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Seção Geral - Onde corrigimos o botão de Sair */}
+        {/* Seção Geral */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Geral</Text>
           <View style={styles.card}>
             
-            {/* Agora o TouchableOpacity tem a função onPress para voltar ao Login */}
             <TouchableOpacity 
               style={styles.settingRow} 
               onPress={() => navigation.navigate('Login')}

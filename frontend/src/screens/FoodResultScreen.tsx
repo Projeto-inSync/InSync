@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableOpacityProps,
+  StyleProp,
+  ViewStyle,
+  ImageBackground,
+  ScrollView,
+  Alert,
+  ActivityIndicator
+} from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
+import { isSoundEnabled } from '../utils/SoundManager';
 import CustomButton from '../components/CustomButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from "@env";
@@ -37,6 +51,7 @@ interface Props {
 export default function FoodResultScreen({ navigation }: Props) {
   const route = useRoute<FoodResultScreenRouteProp>();
   const [loading, setLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   const { analysisResult } = route.params || {
     analysisResult: {
@@ -49,8 +64,68 @@ export default function FoodResultScreen({ navigation }: Props) {
   const classificacaoLower = analysisResult.classification.toLowerCase();
   const ehPrejudicial = CATEGORIAS_PREJUDICIAIS.has(classificacaoLower);
 
+  // Efeito para áudio de entrada e liberação do botão (2 segundos)
+  useEffect(() => {
+    let entrySound: Audio.Sound | null = null;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const playEntrySound = async () => {
+      try {
+        if (isSoundEnabled) {
+          const { sound } = await Audio.Sound.createAsync(
+            require('../assets/analise_concluida.mp3')
+          );
+          entrySound = sound;
+          await sound.playAsync();
+        }
+      } catch (error) {
+        console.error('Erro ao tocar som de entrada:', error);
+      }
+    };
+
+    playEntrySound();
+
+    timer = setTimeout(() => {
+      setIsReady(true);
+    }, 2000);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (entrySound) {
+        entrySound.unloadAsync();
+      }
+    };
+  }, []);
+
+  // Função para reproduzir o som dos botões
+  const playButtonSound = async (type: 'success' | 'error') => {
+    try {
+      if (!isSoundEnabled) return;
+      const audioSource = type === 'success'
+        ? require('../assets/concluido.mp3')
+        : require('../assets/erro.mp3');
+
+      const { sound } = await Audio.Sound.createAsync(audioSource);
+      
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Erro ao tocar o som do botão:', error);
+    }
+  };
+
+  // Envia os dados para o back-end e navega
   const handleFeed = async () => {
+    if (!isReady || loading) return; // Segurança extra
+
     setLoading(true);
+    playButtonSound('success');
+
     try {
       const idPaciente = await AsyncStorage.getItem('idPaciente');
       const idAtivo = await AsyncStorage.getItem('idAtivo');
@@ -90,13 +165,17 @@ export default function FoodResultScreen({ navigation }: Props) {
       }
 
       const data = await response.json();
-      navigation.navigate('HomeTab', {
-        screen: 'Home',
-        params: {
-          feedPanda: true,
-          novasConquistas: data.novas_conquistas ?? [],
-        }
-      });
+
+      // Aguarda 1 segundo para o som tocar antes de mudar de tela
+      setTimeout(() => {
+        navigation.navigate('HomeTab', {
+          screen: 'Home',
+          params: {
+            feedPanda: true,
+            novasConquistas: data.novas_conquistas ?? [],
+          }
+        });
+      }, 1000);
 
     } catch (error) {
       Alert.alert('Erro de conexão', 'Não foi possível salvar o status');
@@ -106,7 +185,13 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleCancel = () => {
-    navigation.navigate('HomeTab');
+    if (!isReady || loading) return;
+
+    playButtonSound('error');
+    
+    setTimeout(() => {
+      navigation.navigate('HomeTab');
+    }, 1000);
   };
 
   return (
@@ -137,7 +222,7 @@ export default function FoodResultScreen({ navigation }: Props) {
           </View>
 
           <Text style={styles.subtitle}>Impacto estimado nos níveis do pet:</Text>
-
+          
           <ImpactBar
             label="Carboidrato"
             delta={carboidrato}
@@ -168,13 +253,16 @@ export default function FoodResultScreen({ navigation }: Props) {
               <CustomButton
                 title="Confirmar e Alimentar"
                 onPress={handleFeed}
-                style={styles.btnPrimary}
+                disabled={!isReady}
+                style={[styles.btnPrimary, { opacity: isReady ? 1 : 0.5 }] as any}
               />
+
               <CustomButton
                 title="Descartar"
                 onPress={handleCancel}
                 variant="cancel"
-                style={styles.btnCancel}
+                disabled={!isReady}
+                style={[styles.btnCancel, { opacity: isReady ? 1 : 0.5 }] as any}
               />
             </>
           )}
@@ -242,7 +330,6 @@ const styles = StyleSheet.create({
   },
   warningRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   warningText: { fontSize: 12, color: '#E53935', fontWeight: '600' },
-
   aiText: { fontSize: 14, color: '#555', fontStyle: 'italic', lineHeight: 20 },
   subtitle: { fontSize: 16, color: '#777', textAlign: 'center', marginBottom: 20, fontWeight: '600' },
   barContainer: { marginBottom: 15 },
@@ -251,7 +338,6 @@ const styles = StyleSheet.create({
   barDelta: { fontSize: 14, fontWeight: 'bold', color: colors.primaryGreen },
   barDeltaWarning: { color: '#E53935' },
   barDeltaNeutral: { color: '#BDBDBD' },
-
   barBackground: { width: '100%', height: 12, backgroundColor: '#EEEEEE', borderRadius: 6, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
   btnPrimary: { marginTop: 20 },

@@ -11,6 +11,10 @@ import { API_URL } from '@env';
 type RootStackParamList = {
   Analysis: { imageBase64: string };
 };
+import { Audio } from 'expo-av';
+
+// 1. Importamos a variável global que diz se o som está liberado
+import { isSoundEnabled } from '../utils/SoundManager';
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -63,45 +67,95 @@ export default function AnalysisScreen({ navigation }: Props) {
       fetchPetName();
     }, [])
   );
+  
+  // Criamos uma referência persistente para o som não se perder entre as renderizações
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
+  // Inicia a animação de rotação do ícone
+  Animated.loop(
+    Animated.timing(spinValue, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    })
+  ).start();
 
-    const processImage = async () => {
-      try {
-        const response = await fetch(`${API_URL}/process-image`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_base64: imageBase64 }),
-        });
+  // Variáveis de controle locais para sincronização
+  let backendData: any = null;
+  let timerFinished = false;
 
-        if (!response.ok) throw new Error('Falha na comunicação com o backend');
-        const data = await response.json();
-
-        navigation.replace('FoodResult', { analysisResult: data });
-
-      } catch (error) {
-        console.error('[AnalysisScreen error]:', error);
-        navigation.replace('FoodResult', {
-          analysisResult: {
-            classification: 'Erro ao analisar imagem',
-            status: { carboidrato: 0, glicemia: 0, proteina: 0 }
-          }
-        });
+  // Função auxiliar para navegar com segurança quando ambos os critérios forem atendidos
+  const tryNavigation = (data: any) => {
+    if (timerFinished && data) {
+      // Ambos terminaram! Limpa o som e troca de tela com os dados reais
+      if (soundRef.current) {
+        soundRef.current.stopAsync()
+          .then(() => soundRef.current?.unloadAsync())
+          .catch(err => console.log('Erro ao parar som:', err));
+        soundRef.current = null;
       }
-    };
+      navigation.replace('FoodResult', { analysisResult: data });
+    }
+  };
 
-    processImage();
+  // 1. Toca o som de análise
+  const playAnalysisSound = async () => {
+    try {
+      if (isSoundEnabled) {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/analisando.mp3'),
+          { isLooping: true }
+        );
+        soundRef.current = sound;
+        await sound.playAsync();
+      }
+    } catch (error) {
+      console.error('Erro ao tocar o som de análise:', error);
+    }
+  };
+  playAnalysisSound();
+
+  const processImage = async () => {
+    try {
+      const response = await fetch(`${API_URL}/process-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_base64: imageBase64 }),
+      });
+
+      if (!response.ok) throw new Error('Falha na comunicação com o backend');
+      
+      backendData = await response.json();
+      tryNavigation(backendData);
+
+    } catch (error) {
+      console.error('[AnalysisScreen error]:', error);
+      backendData = {
+        classification: 'Erro ao analisar imagem',
+        status: { carboidrato: 0, glicemia: 0, proteina: 0 }
+      };
+      tryNavigation(backendData);
+    }
+  };
+  processImage();
+
+  const timer = setTimeout(() => {
+    timerFinished = true;
+    if (backendData) {
+      tryNavigation(backendData);
+    }
+  }, 3000);
 
     return () => {
       spinValue.stopAnimation();
+      clearTimeout(timer);
+      if (soundRef.current) {
+        soundRef.current.stopAsync().then(() => {
+          soundRef.current?.unloadAsync();
+        }).catch(err => console.log('Erro no cleanup do som:', err));
+      }
     };
   }, [navigation, spinValue, imageBase64]);
 
@@ -116,9 +170,17 @@ export default function AnalysisScreen({ navigation }: Props) {
         <Text style={styles.titleText}>
           {petName} está analisando as propriedades do alimento, aguarde um instante.
         </Text>
-        <Animated.View style={{ transform: [{ rotate: spin }] }}>
-          <Ionicons name="sync" size={80} color="#A5D6A7" />
+
+        <Animated.View
+          style={[styles.syncIcon, { transform: [{ rotate: spin }] }]}
+        >
+          <Ionicons
+            name="sync"
+            size={80}
+            color="#A5D6A7"
+          />
         </Animated.View>
+
         <Image
           source={require('../assets/thinking_panda.png')}
           style={styles.pandaImage}
@@ -159,6 +221,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
+  syncIcon: {},
   pandaImage: {
     width: 220,
     height: 220,
