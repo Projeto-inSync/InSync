@@ -15,7 +15,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
 import { API_URL } from '@env';
-// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -41,8 +40,8 @@ export default function LoginScreen({ navigation }: Props) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          login: login,
-          senha:password,
+          login: login.trim(),
+          senha: password.trim(),
         }),
       });
 
@@ -50,15 +49,12 @@ export default function LoginScreen({ navigation }: Props) {
 
       if (!response.ok) {
         Alert.alert('Erro', data.detail);
-        return; 
+        return;
       }
 
       await AsyncStorage.setItem('idPaciente', String(data.user.idPaciente));
       await AsyncStorage.setItem('tipo', data.user.tipo);
       await AsyncStorage.setItem('nome', data.user.nome);
-      await AsyncStorage.setItem('idAtivo', String(data.user.idPaciente));
-      await AsyncStorage.setItem('usuarioAtivoTipo', data.user.tipo);
-      await AsyncStorage.setItem('tipoLoginOriginal', data.user.tipo);
 
       if (data.user.tipo === 'admin') {
         navigation.navigate('Admin');
@@ -120,6 +116,13 @@ export default function LoginScreen({ navigation }: Props) {
           )}
 
           <TouchableOpacity
+            style={styles.forgotContainer}
+            onPress={() => navigation.navigate('RecuperarSenha')}
+          >
+            <Text style={styles.forgotText}>Esqueceu sua senha?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.linkContainer}
             onPress={() => navigation.navigate('Register')}
           >
@@ -145,10 +148,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     width: '100%',
     maxWidth: 320,
-    borderRadius: 25, 
+    borderRadius: 25,
     padding: 30,
     alignItems: 'center',
     elevation: 8,
@@ -196,6 +199,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  forgotContainer: {
+    marginTop: 12,
+  },
+  forgotText: {
+    color: colors.primaryGreen,
+    fontSize: 13,
+  },
   linkContainer: {
     marginTop: 20,
   },
@@ -206,5 +216,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     fontWeight: 'bold',
     color: colors.primaryGreen,
-  }
+  },
 });
