@@ -39,7 +39,7 @@ export default function HomeScreen({ route, navigation }: any) {
         timer = setTimeout(() => {
           setIsEating(false); // Volta a ser o panda feliz
           navigation.setParams({ feedPanda: undefined });
-        }, 6000);
+        }, 3000);
       }
     };
 
