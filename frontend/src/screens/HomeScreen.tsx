@@ -5,9 +5,10 @@ import {
   StyleSheet, 
   ImageBackground, 
   Image,
-  Dimensions 
+  Dimensions,
+  TouchableOpacity // <-- Nova importação adicionada
 } from 'react-native';
-import { Audio } from 'expo-av'; // Importação do áudio
+import { Audio } from 'expo-av'; 
 import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -15,29 +16,46 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ route, navigation }: any) {
   const [isEating, setIsEating] = useState(false);
 
+  // 1. Nova função para tocar o som ao clicar no panda
+  const playPandaSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../assets/panda_sound.mp3') // Lembre-se de adicionar este arquivo na pasta assets
+      );
+      
+      // Descarrega o som da memória automaticamente quando terminar de tocar
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Erro ao tocar o som interativo do panda:', error);
+    }
+  };
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     let soundObject: Audio.Sound | null = null;
 
     const handleFeeding = async () => {
       if (route.params?.feedPanda) {
-        setIsEating(true); // Troca para o panda comendo
+        setIsEating(true); 
 
-        // 1. Carrega e toca o áudio instantaneamente
         try {
           const { sound } = await Audio.Sound.createAsync(
-            require('../assets/mastigando.mp3') // Caminho corrigido!
+            require('../assets/mastigando.mp3') 
           );
           soundObject = sound;
           await sound.playAsync();
         } catch (error) {
-          console.error('Erro ao tocar o som do panda:', error);
+          console.error('Erro ao tocar o som do panda comendo:', error);
         }
 
-        // 2. Cronômetro de 6 segundos da animação
-        // O áudio tem 4s, então ele vai terminar naturalmente um pouco antes da imagem voltar ao normal
         timer = setTimeout(() => {
-          setIsEating(false); // Volta a ser o panda feliz
+          setIsEating(false); 
           navigation.setParams({ feedPanda: undefined });
         }, 3000);
       }
@@ -45,11 +63,10 @@ export default function HomeScreen({ route, navigation }: any) {
 
     handleFeeding();
 
-    // 3. Limpeza de segurança caso a tela seja fechada
     return () => {
       if (timer) clearTimeout(timer);
       if (soundObject) {
-        soundObject.unloadAsync(); // Limpa o áudio da memória
+        soundObject.unloadAsync(); 
       }
     };
   }, [route.params?.feedPanda]);
@@ -87,10 +104,13 @@ export default function HomeScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.petContainer}>
-          <Image 
-            source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
-            style={styles.pandaImage}
-          />
+          {/* 2. Envolvemos a Imagem com o TouchableOpacity */}
+          <TouchableOpacity activeOpacity={0.8} onPress={playPandaSound}>
+            <Image 
+              source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 
+              style={styles.pandaImage}
+            />
+          </TouchableOpacity>
         </View>
 
       </View>
