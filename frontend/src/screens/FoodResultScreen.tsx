@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av'; // Importamos o módulo de áudio
+import { Audio } from 'expo-av'; 
 import { colors } from '../theme/colors';
 
 // Importando o nosso botão customizado com o efeito de "clique"
@@ -14,16 +14,15 @@ type Props = {
 
 export default function FoodResultScreen({ navigation }: Props) {
   
-  // Função inteligente que toca o som e se auto-destrói da memória após o fim
+  // Função que toca o som e se auto-destrói da memória após o fim
   const playButtonSound = async (type: 'success' | 'error') => {
     try {
       const audioSource = type === 'success' 
-        ? require('../assets/concluido.mp3') // Som para o "Alimentar"
-        : require('../assets/erro.mp3');     // Som para o "Não alimentar"
+        ? require('../assets/concluido.mp3') 
+        : require('../assets/erro.mp3');     
 
       const { sound } = await Audio.Sound.createAsync(audioSource);
       
-      // Limpeza automática da memória assim que o som terminar
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
@@ -37,16 +36,24 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleFeed = () => {
-    playButtonSound('success'); // Toca o som de sucesso
-    navigation.navigate('HomeTab', { 
-      screen: 'HomeTab', 
-      params: { feedPanda: true } 
-    });
+    playButtonSound('success'); // Toca o som imediatamente
+    
+    // Aguarda 1 segundo (1000ms) antes de mudar de tela
+    setTimeout(() => {
+      navigation.navigate('HomeTab', { 
+        screen: 'HomeTab', 
+        params: { feedPanda: true } 
+      });
+    }, 1000);
   };
 
   const handleCancel = () => {
-    playButtonSound('error'); // Toca o som de erro/cancelamento
-    navigation.navigate('HomeTab');
+    playButtonSound('error'); // Toca o som imediatamente
+    
+    // Aguarda 1 segundo (1000ms) antes de mudar de tela
+    setTimeout(() => {
+      navigation.navigate('HomeTab');
+    }, 1000);
   };
 
   return (
@@ -95,7 +102,6 @@ export default function FoodResultScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* Nossos botões novos em ação! */}
           <CustomButton 
             title="Alimentar Mascote" 
             onPress={handleFeed} 
