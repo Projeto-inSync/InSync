@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +13,43 @@ type Props = {
 };
 
 export default function FoodResultScreen({ navigation }: Props) {
-  
-  // Função que toca o som e se auto-destrói da memória após o fim
+  // Estado para controlar se os botões estão liberados para clique
+  const [isReady, setIsReady] = useState(false);
+
+  // Efeito disparado assim que a tela abre
+  useEffect(() => {
+    let entrySound: Audio.Sound | null = null;
+    let timer: NodeJS.Timeout;
+
+    const playEntrySound = async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/analise_concluida.mp3') // Adicione este áudio nos assets
+        );
+        entrySound = sound;
+        await sound.playAsync();
+      } catch (error) {
+        console.error('Erro ao tocar som de entrada:', error);
+      }
+    };
+
+    playEntrySound();
+
+    // Inicia o cronômetro de 2 segundos para liberar os botões
+    timer = setTimeout(() => {
+      setIsReady(true);
+    }, 2000);
+
+    // Limpeza de memória caso o usuário saia da tela de alguma outra forma
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (entrySound) {
+        entrySound.unloadAsync();
+      }
+    };
+  }, []);
+
+  // Função que toca o som dos botões e se auto-destrói da memória após o fim
   const playButtonSound = async (type: 'success' | 'error') => {
     try {
       const audioSource = type === 'success' 
@@ -36,9 +71,10 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleFeed = () => {
-    playButtonSound('success'); // Toca o som imediatamente
+    if (!isReady) return; // Trava de segurança extra para evitar cliques precoces
+
+    playButtonSound('success'); 
     
-    // Aguarda 1 segundo (1000ms) antes de mudar de tela
     setTimeout(() => {
       navigation.navigate('HomeTab', { 
         screen: 'HomeTab', 
@@ -48,9 +84,10 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleCancel = () => {
-    playButtonSound('error'); // Toca o som imediatamente
+    if (!isReady) return; // Trava de segurança extra para evitar cliques precoces
+
+    playButtonSound('error'); 
     
-    // Aguarda 1 segundo (1000ms) antes de mudar de tela
     setTimeout(() => {
       navigation.navigate('HomeTab');
     }, 1000);
@@ -102,17 +139,20 @@ export default function FoodResultScreen({ navigation }: Props) {
             </View>
           </View>
 
+          {/* Botões com bloqueio (disabled) e efeito visual de opacidade */}
           <CustomButton 
             title="Alimentar Mascote" 
             onPress={handleFeed} 
-            style={{ marginTop: 20 }} 
+            disabled={!isReady}
+            style={{ marginTop: 20, opacity: isReady ? 1 : 0.5 }} 
           />
 
           <CustomButton 
             title="Não alimentar" 
             onPress={handleCancel} 
             variant="cancel" 
-            style={{ marginTop: 10 }}
+            disabled={!isReady}
+            style={{ marginTop: 10, opacity: isReady ? 1 : 0.5 }}
           />
 
         </View>
