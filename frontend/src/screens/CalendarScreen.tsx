@@ -212,7 +212,7 @@ export default function CalendarScreen() {
 
   const fetchDependents = async () => {
     const idPaciente = await AsyncStorage.getItem('idPaciente');
-    const tipo = await AsyncStorage.getItem('tipo');
+    const tipo = await AsyncStorage.getItem('usuarioAtivoTipo');
     setTipoUsuario(tipo || '');
 
     if (tipo === 'filho') {

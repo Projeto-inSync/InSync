@@ -41,13 +41,17 @@ export default function ProfileScreen({ navigation }: any) {
   const [tipoLoginOriginal, setTipoLoginOriginal] = useState('');
   const [usuarioAtivoTipo, setUsuarioAtivoTipo] = useState('');
 
-  const fetchConquistas = async () => {
+  const fetchConquistas = async (idParaBuscar?: string) => { // ✅ aceita parâmetro
     try {
       setLoadingConquistas(true);
-      let idAtivo = await AsyncStorage.getItem('idAtivo');
-      if (!idAtivo) idAtivo = await AsyncStorage.getItem('idPaciente');
-      if (!idAtivo) return;
-      const response = await fetch(`${API_URL}/conquistas/${idAtivo}`);
+      let id = idParaBuscar;
+      if (!id) {
+        let idAtivo = await AsyncStorage.getItem('idAtivo');
+        if (!idAtivo) idAtivo = await AsyncStorage.getItem('idPaciente');
+        id = idAtivo || undefined;
+      }
+      if (!id) return;
+      const response = await fetch(`${API_URL}/conquistas/${id}`);
       if (response.ok) {
         const data = await response.json();
         setConquistas(data);
@@ -97,6 +101,13 @@ export default function ProfileScreen({ navigation }: any) {
         const sufixo = tipoOriginal === 'responsavel' ? ' (Responsável)' : '';
         setCurrentUser(`${nomeResponsavel}${sufixo}`);
       }
+
+      // ✅ ADICIONAR: chama fetchConquistas com o id correto já resolvido
+      const idFinal = (ativoTipo === 'filho' && idAtivo && idAtivo !== idResponsavel)
+        ? idAtivo
+        : idResponsavel;
+      await fetchConquistas(idFinal || undefined);
+
     } catch (error) {
       console.log("Erro ao buscar dependentes:", error);
     } finally {
@@ -104,13 +115,10 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
+  // ✅ ALTERAR: remove o fetchConquistas separado, já é chamado dentro do fetchFamilyData
   useFocusEffect(
     useCallback(() => {
-      const init = async () => {
-        await fetchFamilyData();
-        await fetchConquistas();
-      };
-      init()
+      fetchFamilyData();
     }, [])
   );
 

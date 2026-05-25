@@ -240,7 +240,7 @@ def get_character_status(id_paciente: int):
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         query = """
-            SELECT forca, energia, felicidade, alimentacao, xp
+            SELECT nome, carboidrato, glicemia, proteina
             FROM Personagem
             WHERE idPaciente = %s
         """
@@ -250,6 +250,7 @@ def get_character_status(id_paciente: int):
             raise HTTPException(status_code=404, detail="Status do personagem não encontrado")
         return status
     except Exception as err:
+        print(f"ERRO get_character_status id={id_paciente}: {err}")
         raise HTTPException(status_code=400, detail=str(err))
     finally:
         if cursor:
@@ -490,6 +491,140 @@ def reset_password_service(email: str, token: str, nova_senha: str):
     except Exception as err:
         if conn:
             conn.rollback()
+        raise HTTPException(status_code=400, detail=str(err))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def get_conquistas_service(id_paciente: int):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        query = """
+            SELECT c.idConquista, c.nome, c.descricao, c.icone, c.cor_fundo, c.cor_icone, pc.desbloqueada_em
+            FROM PacienteConquista pc
+            JOIN Conquista c ON pc.idConquista = c.idConquista
+            WHERE pc.idPaciente = %s
+            ORDER BY pc.desbloqueada_em DESC
+        """
+        cursor.execute(query, (id_paciente,))
+        conquistas = cursor.fetchall()
+        return conquistas
+    except Exception as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def get_historico_service(id_paciente: int, periodo: str, data_ref: str):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if periodo == 'week':
+            query = """
+                SELECT
+                    TO_CHAR(registrado_em, 'DD/MM') AS label,
+                    ROUND(AVG(carboidrato)) AS carboidrato,
+                    ROUND(AVG(glicemia)) AS glicemia,
+                    ROUND(AVG(proteina)) AS proteina
+                FROM HistoricoSaude
+                WHERE idPaciente = %s
+                AND registrado_em >= %s::date - INTERVAL '6 days'
+                AND registrado_em <= %s::date + INTERVAL '1 day'
+                GROUP BY DATE_TRUNC('day', registrado_em), TO_CHAR(registrado_em, 'DD/MM')
+                ORDER BY DATE_TRUNC('day', registrado_em)
+            """
+            cursor.execute(query, (id_paciente, data_ref, data_ref))
+        else:
+            query = """
+                SELECT
+                    TO_CHAR(registrado_em, 'DD/MM') AS label,
+                    ROUND(AVG(carboidrato)) AS carboidrato,
+                    ROUND(AVG(glicemia)) AS glicemia,
+                    ROUND(AVG(proteina)) AS proteina
+                FROM HistoricoSaude
+                WHERE idPaciente = %s
+                AND DATE_TRUNC('month', registrado_em) = DATE_TRUNC('month', %s::date)
+                GROUP BY DATE_TRUNC('day', registrado_em), TO_CHAR(registrado_em, 'DD/MM')
+                ORDER BY DATE_TRUNC('day', registrado_em)
+            """
+            cursor.execute(query, (id_paciente, data_ref))
+
+        rows = cursor.fetchall()
+
+        if not rows:
+            return {
+                "labels": [],
+                "carboidrato": [],
+                "glicemia": [],
+                "proteina": [],
+                "resumo": {
+                    "media_carboidrato": 0,
+                    "media_glicemia": 0,
+                    "media_proteina": 0,
+                    "total_refeicoes": 0,
+                    "refeicoes_saudaveis": 0,
+                }
+            }
+
+        labels      = [row[0] for row in rows]
+        carboidrato = [int(row[1]) for row in rows]
+        glicemia    = [int(row[2]) for row in rows]
+        proteina    = [int(row[3]) for row in rows]
+
+        # resumo do período completo
+        if periodo == 'week':
+            cursor.execute("""
+                SELECT
+                    ROUND(AVG(carboidrato)) AS media_carboidrato,
+                    ROUND(AVG(glicemia))    AS media_glicemia,
+                    ROUND(AVG(proteina))    AS media_proteina,
+                    COUNT(*)                AS total_refeicoes,
+                    SUM(CASE WHEN eh_saudavel THEN 1 ELSE 0 END) AS refeicoes_saudaveis
+                FROM HistoricoSaude
+                WHERE idPaciente = %s
+                AND registrado_em >= %s::date - INTERVAL '6 days'
+                AND registrado_em <= %s::date + INTERVAL '1 day'
+            """, (id_paciente, data_ref, data_ref))
+        else:
+            cursor.execute("""
+                SELECT
+                    ROUND(AVG(carboidrato)) AS media_carboidrato,
+                    ROUND(AVG(glicemia))    AS media_glicemia,
+                    ROUND(AVG(proteina))    AS media_proteina,
+                    COUNT(*)                AS total_refeicoes,
+                    SUM(CASE WHEN eh_saudavel THEN 1 ELSE 0 END) AS refeicoes_saudaveis
+                FROM HistoricoSaude
+                WHERE idPaciente = %s
+                AND DATE_TRUNC('month', registrado_em) = DATE_TRUNC('month', %s::date)
+            """, (id_paciente, data_ref))
+
+        resumo = cursor.fetchone()
+
+        return {
+            "labels": labels,
+            "carboidrato": carboidrato,
+            "glicemia": glicemia,
+            "proteina": proteina,
+            "resumo": {
+                "media_carboidrato": int(resumo[0] or 0),
+                "media_glicemia":    int(resumo[1] or 0),
+                "media_proteina":    int(resumo[2] or 0),
+                "total_refeicoes":   int(resumo[3] or 0),
+                "refeicoes_saudaveis": int(resumo[4] or 0),
+            }
+        }
+
+    except Exception as err:
         raise HTTPException(status_code=400, detail=str(err))
     finally:
         if cursor:

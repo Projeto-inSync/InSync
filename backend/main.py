@@ -14,6 +14,8 @@ from services.connection_db import (
     get_dependents_service,
     request_password_reset_service,
     reset_password_service,
+    get_conquistas_service,
+    get_historico_service
 )
 
 app = FastAPI()
@@ -191,6 +193,29 @@ async def forgot_password(data: ForgotPasswordData):
 async def reset_password(data: ResetPasswordData):
     try:
         result = reset_password_service(data.email, data.token, data.nova_senha)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/conquistas/{id_paciente}")
+async def get_conquistas(id_paciente: int):
+    try:
+        result = get_conquistas_service(id_paciente)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/historico/{id_paciente}")
+async def get_historico(id_paciente: int, periodo: str = 'week', data_ref: str = ''):
+    try:
+        if not data_ref:
+            from datetime import date
+            data_ref = str(date.today())
+        result = get_historico_service(id_paciente, periodo, data_ref)
         return result
     except HTTPException:
         raise

@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
 import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -55,6 +56,9 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('idPaciente', String(data.user.idPaciente));
       await AsyncStorage.setItem('tipo', data.user.tipo);
       await AsyncStorage.setItem('nome', data.user.nome);
+      await AsyncStorage.setItem('usuarioAtivoTipo', data.user.tipo);
+      await AsyncStorage.setItem('tipoLoginOriginal', data.user.tipo);
+      await AsyncStorage.removeItem('idAtivo');
 
       if (data.user.tipo === 'admin') {
         navigation.navigate('Admin');

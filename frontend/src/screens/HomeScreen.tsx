@@ -144,10 +144,14 @@ export default function HomeScreen({ route, navigation }: any) {
       }
 
       const response = await fetch(`${API_URL}/character-status/${idParaBuscar}`);
-      if (!response.ok) return;
+      if (!response.ok) {
+        setPetName('Sem mascote');
+        return;
+      }
       const data = await response.json();
 
       if (data?.nome) setPetName(data.nome);
+      else setPetName('Sem mascote');
       const novaGlicemia = data.glicemia ?? 0;
       setPetStatus({
         carboidrato: data.carboidrato ?? 0,
