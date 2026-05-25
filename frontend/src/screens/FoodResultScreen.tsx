@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av'; // Importamos o módulo de áudio
 import { colors } from '../theme/colors';
 
 // Importando o nosso botão customizado com o efeito de "clique"
@@ -13,7 +14,30 @@ type Props = {
 
 export default function FoodResultScreen({ navigation }: Props) {
   
+  // Função inteligente que toca o som e se auto-destrói da memória após o fim
+  const playButtonSound = async (type: 'success' | 'error') => {
+    try {
+      const audioSource = type === 'success' 
+        ? require('../assets/concluido.mp3') // Som para o "Alimentar"
+        : require('../assets/erro.mp3');     // Som para o "Não alimentar"
+
+      const { sound } = await Audio.Sound.createAsync(audioSource);
+      
+      // Limpeza automática da memória assim que o som terminar
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Erro ao tocar o som do botão:', error);
+    }
+  };
+
   const handleFeed = () => {
+    playButtonSound('success'); // Toca o som de sucesso
     navigation.navigate('HomeTab', { 
       screen: 'HomeTab', 
       params: { feedPanda: true } 
@@ -21,6 +45,7 @@ export default function FoodResultScreen({ navigation }: Props) {
   };
 
   const handleCancel = () => {
+    playButtonSound('error'); // Toca o som de erro/cancelamento
     navigation.navigate('HomeTab');
   };
 
