@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Dimensions, Animated, Easing } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av'; 
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -9,33 +10,65 @@ type Props = {
 
 export default function AnalysisScreen({ navigation }: Props) {
   
-  // Criamos o valor animado para a rotação (começa em 0)
   const spinValue = useRef(new Animated.Value(0)).current;
+  
+  // Criamos uma referência persistente para o som não se perder entre as renderizações
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     // Configura a animação de rotação contínua (loop)
     Animated.loop(
       Animated.timing(spinValue, {
-        toValue: 1, // Vai até 1 (representa 360 graus)
-        duration: 1500, // Duração de uma volta completa
-        easing: Easing.linear, // Movimento constante, sem aceleração/desaceleração
-        useNativeDriver: true, // Usa o motor nativo para performance suave
+        toValue: 1,
+        duration: 1500,
+        easing: Easing.linear,
+        useNativeDriver: true,
       })
-    ).start(); // Inicia o loop
+    ).start();
 
-    // Mantemos a lógica do temporizador de 3 segundos para navegar
-    const timer = setTimeout(() => {
+    // Função para carregar e tocar o som de análise
+    const playAnalysisSound = async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/analisando.mp3'),
+          { isLooping: true }
+        );
+        soundRef.current = sound; // Guarda a instância do som na referência
+        await sound.playAsync();
+      } catch (error) {
+        console.error('Erro ao tocar o som de análise:', error);
+      }
+    };
+
+    playAnalysisSound();
+
+    // Forçamos o som a parar exatamente aos 3 segundos, junto com a navegação
+    const timer = setTimeout(async () => {
+      if (soundRef.current) {
+        try {
+          await soundRef.current.stopAsync();
+          await soundRef.current.unloadAsync();
+          soundRef.current = null; // Limpa a referência
+        } catch (error) {
+          console.error('Erro ao parar o som no temporizador:', error);
+        }
+      }
       navigation.navigate('FoodResult'); 
     }, 3000);
 
+    // Limpeza de segurança caso o usuário saia da tela antes dos 3 segundos acabar
     return () => {
-      // Limpa a animação e o timer se o usuário sair da tela
       spinValue.stopAnimation();
       clearTimeout(timer);
+      
+      if (soundRef.current) {
+        soundRef.current.stopAsync().then(() => {
+          soundRef.current?.unloadAsync();
+        }).catch(err => console.log('Erro no cleanup do som:', err));
+      }
     };
   }, [navigation, spinValue]);
 
-  // Interpolação: Converte o valor de 0-1 em 0deg-360deg para o estilo
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
@@ -44,14 +77,12 @@ export default function AnalysisScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       
-      {/* O "Card" central de análise (idêntico ao Figma) */}
       <View style={styles.analysisCard}>
         
         <Text style={styles.titleText}>
           [nome_pet] está analisando as propriedades do alimento, aguarde um instante.
         </Text>
         
-        {/* Ícone de sincronização AGORA É UM Animated.View */}
         <Animated.View style={[styles.syncIcon, { transform: [{ rotate: spin }] }]}>
           <Ionicons 
             name="sync" 
@@ -60,7 +91,6 @@ export default function AnalysisScreen({ navigation }: Props) {
           />
         </Animated.View>
         
-        {/* O Panda pensativo oficial (thinking_panda.png) */}
         <Image 
           source={require('../assets/thinking_panda.png')} 
           style={styles.pandaImage} 
@@ -103,9 +133,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
-  syncIcon: {
-    // A animação de rotação é aplicada aqui
-  },
+  syncIcon: {},
   pandaImage: {
     width: 220,
     height: 220,
