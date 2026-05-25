@@ -6,24 +6,29 @@ import {
   ImageBackground, 
   Image,
   Dimensions,
-  TouchableOpacity // <-- Nova importação adicionada
+  TouchableOpacity
 } from 'react-native';
 import { Audio } from 'expo-av'; 
 import { colors } from '../theme/colors';
+
+// 1. Importando a variável global de controle de som
+import { isSoundEnabled } from '../utils/SoundManager';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ route, navigation }: any) {
   const [isEating, setIsEating] = useState(false);
 
-  // 1. Nova função para tocar o som ao clicar no panda
+  // Função para tocar o som ao clicar no panda
   const playPandaSound = async () => {
     try {
+      // 2. Trava de som: Se estiver desligado, sai da função antes de carregar o áudio
+      if (!isSoundEnabled) return;
+
       const { sound } = await Audio.Sound.createAsync(
-        require('../assets/panda_sound.mp3') // Lembre-se de adicionar este arquivo na pasta assets
+        require('../assets/panda_sound.mp3') 
       );
       
-      // Descarrega o som da memória automaticamente quando terminar de tocar
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
@@ -45,11 +50,14 @@ export default function HomeScreen({ route, navigation }: any) {
         setIsEating(true); 
 
         try {
-          const { sound } = await Audio.Sound.createAsync(
-            require('../assets/mastigando.mp3') 
-          );
-          soundObject = sound;
-          await sound.playAsync();
+          // 3. Trava de som: Só carrega e toca o som de mastigar se estiver ativado
+          if (isSoundEnabled) {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../assets/mastigando.mp3') 
+            );
+            soundObject = sound;
+            await sound.playAsync();
+          }
         } catch (error) {
           console.error('Erro ao tocar o som do panda comendo:', error);
         }
@@ -104,7 +112,6 @@ export default function HomeScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.petContainer}>
-          {/* 2. Envolvemos a Imagem com o TouchableOpacity */}
           <TouchableOpacity activeOpacity={0.8} onPress={playPandaSound}>
             <Image 
               source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')} 

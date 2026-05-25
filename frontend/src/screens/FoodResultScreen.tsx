@@ -5,6 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av'; 
 import { colors } from '../theme/colors';
 
+// 1. Importando a nossa variável de controle de som
+import { isSoundEnabled } from '../utils/SoundManager';
+
 // Importando o nosso botão customizado com o efeito de "clique"
 import CustomButton from '../components/CustomButton';
 
@@ -23,11 +26,14 @@ export default function FoodResultScreen({ navigation }: Props) {
 
     const playEntrySound = async () => {
       try {
-        const { sound } = await Audio.Sound.createAsync(
-          require('../assets/analise_concluida.mp3') // Adicione este áudio nos assets
-        );
-        entrySound = sound;
-        await sound.playAsync();
+        // 2. Trava do som de entrada: só carrega e toca se estiver ativado
+        if (isSoundEnabled) {
+          const { sound } = await Audio.Sound.createAsync(
+            require('../assets/analise_concluida.mp3') // Adicione este áudio nos assets
+          );
+          entrySound = sound;
+          await sound.playAsync();
+        }
       } catch (error) {
         console.error('Erro ao tocar som de entrada:', error);
       }
@@ -52,6 +58,9 @@ export default function FoodResultScreen({ navigation }: Props) {
   // Função que toca o som dos botões e se auto-destrói da memória após o fim
   const playButtonSound = async (type: 'success' | 'error') => {
     try {
+      // 3. Trava do som dos botões: se estiver desativado, encerra a função aqui mesmo (return)
+      if (!isSoundEnabled) return;
+
       const audioSource = type === 'success' 
         ? require('../assets/concluido.mp3') 
         : require('../assets/erro.mp3');     

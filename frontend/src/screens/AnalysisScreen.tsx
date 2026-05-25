@@ -4,6 +4,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av'; 
 
+// 1. Importamos a variável global que diz se o som está liberado
+import { isSoundEnabled } from '../utils/SoundManager';
+
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
 };
@@ -29,12 +32,16 @@ export default function AnalysisScreen({ navigation }: Props) {
     // Função para carregar e tocar o som de análise
     const playAnalysisSound = async () => {
       try {
-        const { sound } = await Audio.Sound.createAsync(
-          require('../assets/analisando.mp3'),
-          { isLooping: true }
-        );
-        soundRef.current = sound; // Guarda a instância do som na referência
-        await sound.playAsync();
+        // 2. A trava de som entra aqui! 
+        // O som só é carregado e tocado se estiver ativado nas configurações
+        if (isSoundEnabled) {
+          const { sound } = await Audio.Sound.createAsync(
+            require('../assets/analisando.mp3'),
+            { isLooping: true }
+          );
+          soundRef.current = sound; 
+          await sound.playAsync();
+        }
       } catch (error) {
         console.error('Erro ao tocar o som de análise:', error);
       }
