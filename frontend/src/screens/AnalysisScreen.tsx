@@ -5,8 +5,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '@env';
-// const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// import { API_URL } from '@env';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type RootStackParamList = {
   Analysis: { imageBase64: string };
@@ -29,13 +29,23 @@ export default function AnalysisScreen({ navigation }: Props) {
 
   const fetchPetName = async () => {
     try {
+      const idPaciente = await AsyncStorage.getItem('idPaciente');
       const idAtivo = await AsyncStorage.getItem('idAtivo');
+      const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
       const tipo = await AsyncStorage.getItem('tipo');
-      const idResponsavel = await AsyncStorage.getItem('idPaciente');
 
-      if (!idAtivo) return;
+      // Filho logado diretamente
+      if (tipoLoginOriginal === 'filho') {
+        if (!idPaciente) return;
+        const response = await fetch(`${API_URL}/character-status/${idPaciente}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        return;
+      }
 
-      if (tipo === 'filho') {
+      // Responsável visualizando filho específico
+      if (tipo === 'filho' && idAtivo) {
         const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
         if (!response.ok) return;
         const data = await response.json();
@@ -43,7 +53,9 @@ export default function AnalysisScreen({ navigation }: Props) {
         return;
       }
 
+      // Responsável na própria conta: busca primeiro filho
       if (tipo === 'responsavel') {
+        const idResponsavel = idPaciente;
         if (idAtivo && idAtivo !== idResponsavel) {
           const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
           if (!response.ok) return;

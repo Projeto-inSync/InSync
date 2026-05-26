@@ -1,4 +1,3 @@
-// ✅ ARQUIVO NOVO — criar em screens/ForgotPasswordScreen.tsx
 // Lembrar de registrar no navigator: <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
 import React, { useState } from 'react';
@@ -17,6 +16,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;

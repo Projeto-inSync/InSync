@@ -167,50 +167,70 @@ export default function HomeScreen({ route, navigation }: any) {
       const idPaciente = await AsyncStorage.getItem('idPaciente');
       const idAtivo = await AsyncStorage.getItem('idAtivo');
       const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
+      const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
 
-      if (!idAtivo && !idPaciente) return;
-      let idParaBuscar = idAtivo || idPaciente;
+      if (!idPaciente) return;
 
-      if (usuarioAtivoTipo === 'responsavel' && idParaBuscar === idPaciente) {
-        const depRes = await fetch(`${API_URL}/dependents/${idPaciente}`);
-        if (depRes.ok) {
-          const dependents = await depRes.json();
-          if (dependents.length === 0) { setPetName('Sem mascote'); return; }
-          idParaBuscar = String(dependents[0].idpaciente);
-          await AsyncStorage.setItem('idAtivo', idParaBuscar);
-        }
-      }
-
-      const response = await fetch(`${API_URL}/character-status/${idParaBuscar}`);
-      if (!response.ok) {
-        setPetName('Sem mascote');
+      // Filho logado diretamente: usa o próprio idPaciente
+      if (tipoLoginOriginal === 'filho') {
+        const response = await fetch(`${API_URL}/character-status/${idPaciente}`);
+        if (!response.ok) { setPetName('Sem mascote'); return; }
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        setPetStatus({
+          carboidrato: data.carboidrato ?? 0,
+          glicemia: data.glicemia ?? 0,
+          proteina: data.proteina ?? 0,
+        });
         return;
       }
-      const data = await response.json();
 
-      if (data?.nome) setPetName(data.nome);
-      else setPetName('Sem mascote');
-      const novaGlicemia = data.glicemia ?? 0;
-      setPetStatus({
-        carboidrato: data.carboidrato ?? 0,
-        glicemia:    novaGlicemia,
-        proteina:    data.proteina    ?? 0,
-      });
-
-      if (usuarioAtivoTipo === 'responsavel' && novaGlicemia > 60) {
-        navigation.navigate('Calendar', {
-          alertaGlicemiaImediato: {
-            idpaciente: data.idpaciente,
-            nomefilho: petName || 'Seu filho',
-            valorGlicemia: novaGlicemia
-          }
+      // Responsável visualizando filho específico
+      if (usuarioAtivoTipo === 'filho' && idAtivo && idAtivo !== idPaciente) {
+        const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
+        if (!response.ok) { setPetName('Sem mascote'); return; }
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        setPetStatus({
+          carboidrato: data.carboidrato ?? 0,
+          glicemia: data.glicemia ?? 0,
+          proteina: data.proteina ?? 0,
         });
+        return;
+      }
+
+      // Responsável na própria conta: busca primeiro filho
+      const depRes = await fetch(`${API_URL}/dependents/${idPaciente}`);
+      if (depRes.ok) {
+        const dependents = await depRes.json();
+        if (dependents.length === 0) { setPetName('Sem mascote'); return; }
+        const idFilho = String(dependents[0].idpaciente);
+        await AsyncStorage.setItem('idAtivo', idFilho);
+        const response = await fetch(`${API_URL}/character-status/${idFilho}`);
+        if (!response.ok) { setPetName('Sem mascote'); return; }
+        const data = await response.json();
+        if (data?.nome) setPetName(data.nome);
+        setPetStatus({
+          carboidrato: data.carboidrato ?? 0,
+          glicemia: data.glicemia ?? 0,
+          proteina: data.proteina ?? 0,
+        });
+
+        const novaGlicemia = data.glicemia ?? 0;
+        if (novaGlicemia > 60) {
+          navigation.navigate('Calendar', {
+            alertaGlicemiaImediato: {
+              idpaciente: data.idpaciente,
+              nomefilho: data.nome || 'Seu filho',
+              valorGlicemia: novaGlicemia
+            }
+          });
+        }
       }
     } catch (error) {
       console.log('Erro ao buscar dados do pet:', error);
     }
   }, []);
-
   useFocusEffect(
     useCallback(() => {
       fetchPetName();

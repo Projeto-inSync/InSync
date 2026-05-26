@@ -66,25 +66,40 @@ export default function ProfileScreen({ navigation }: any) {
   const fetchFamilyData = async () => {
     setLoading(true);
     try {
-      const idResponsavel = await AsyncStorage.getItem("idPaciente");
+      const idPaciente = await AsyncStorage.getItem("idPaciente");
       const nomeResponsavel = await AsyncStorage.getItem("nome");
       const ativoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
-      const idAtivo = await AsyncStorage.getItem('idAtivo');
       const tipoOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
+      let idAtivo = await AsyncStorage.getItem('idAtivo');
 
       setTipoLoginOriginal(tipoOriginal || '');
       if (ativoTipo) setUsuarioAtivoTipo(ativoTipo);
-
-      if (idResponsavel) {
-        await AsyncStorage.setItem('idResponsavel', idResponsavel);
-        if (!idAtivo) await AsyncStorage.setItem('idAtivo', idResponsavel);
-      }
-
       if (nomeResponsavel) setParentName(nomeResponsavel);
 
+      // Se é filho logado diretamente, idAtivo deve ser o próprio idPaciente
+      if (tipoOriginal === 'filho') {
+        if (!idAtivo) {
+          await AsyncStorage.setItem('idAtivo', idPaciente!);
+          idAtivo = idPaciente;
+        }
+        setCurrentUser(nomeResponsavel || 'Filho');
+        await fetchConquistas(idAtivo || undefined);
+        setLoading(false);
+        return; // não precisa buscar dependentes
+      }
+
+      // Fluxo normal do responsável
+      if (idPaciente) {
+        await AsyncStorage.setItem('idResponsavel', idPaciente);
+        if (!idAtivo) {
+          await AsyncStorage.setItem('idAtivo', idPaciente);
+          idAtivo = idPaciente;
+        }
+      }
+
       let deps: any[] = [];
-      if (idResponsavel) {
-        const response = await fetch(`${API_URL}/dependents/${idResponsavel}`);
+      if (idPaciente) {
+        const response = await fetch(`${API_URL}/dependents/${idPaciente}`);
         const data = await response.json();
         if (response.ok) {
           deps = data;
@@ -92,7 +107,7 @@ export default function ProfileScreen({ navigation }: any) {
         }
       }
 
-      if (ativoTipo === 'filho' && idAtivo && idAtivo !== idResponsavel) {
+      if (ativoTipo === 'filho' && idAtivo && idAtivo !== idPaciente) {
         const filhoAtivo = deps.find(
           (d: any) => String(d.idpaciente) === String(idAtivo)
         );
@@ -102,10 +117,9 @@ export default function ProfileScreen({ navigation }: any) {
         setCurrentUser(`${nomeResponsavel}${sufixo}`);
       }
 
-      // ✅ ADICIONAR: chama fetchConquistas com o id correto já resolvido
-      const idFinal = (ativoTipo === 'filho' && idAtivo && idAtivo !== idResponsavel)
+      const idFinal = (ativoTipo === 'filho' && idAtivo && idAtivo !== idPaciente)
         ? idAtivo
-        : idResponsavel;
+        : idPaciente;
       await fetchConquistas(idFinal || undefined);
 
     } catch (error) {
@@ -115,7 +129,6 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  // ✅ ALTERAR: remove o fetchConquistas separado, já é chamado dentro do fetchFamilyData
   useFocusEffect(
     useCallback(() => {
       fetchFamilyData();
