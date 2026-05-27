@@ -3,10 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  TouchableOpacityProps,
-  StyleProp,
-  ViewStyle,
   ImageBackground,
   ScrollView,
   Alert,
@@ -26,7 +22,8 @@ import { API_URL } from "@env";
 const CATEGORIAS_PREJUDICIAIS = new Set([
   'sweets', 'candy', 'chocolate', 'dessert',
   'snacks', 'snack', 'chips', 'cookies',
-  'sausages', 'sausage',
+  'sausages', 'sausage', 'junk food', 'fast food',
+  'fried', 'processed',
 ]);
 
 interface AnalysisResult {
@@ -62,9 +59,10 @@ export default function FoodResultScreen({ navigation }: Props) {
 
   const { carboidrato, glicemia, proteina } = analysisResult.status;
   const classificacaoLower = analysisResult.classification.toLowerCase();
-  const ehPrejudicial = CATEGORIAS_PREJUDICIAIS.has(classificacaoLower);
+  const ehPrejudicial = [...CATEGORIAS_PREJUDICIAIS].some(cat =>
+    classificacaoLower.includes(cat)
+  );
 
-  // Efeito para áudio de entrada e liberação do botão (2 segundos)
   useEffect(() => {
     let entrySound: Audio.Sound | null = null;
     let timer: ReturnType<typeof setTimeout>;
@@ -97,7 +95,6 @@ export default function FoodResultScreen({ navigation }: Props) {
     };
   }, []);
 
-  // Função para reproduzir o som dos botões
   const playButtonSound = async (type: 'success' | 'error') => {
     try {
       if (!isSoundEnabled) return;
@@ -119,9 +116,8 @@ export default function FoodResultScreen({ navigation }: Props) {
     }
   };
 
-  // Envia os dados para o back-end e navega
   const handleFeed = async () => {
-    if (!isReady || loading) return; // Segurança extra
+    if (!isReady || loading) return;
 
     setLoading(true);
     playButtonSound('success');
@@ -166,7 +162,6 @@ export default function FoodResultScreen({ navigation }: Props) {
 
       const data = await response.json();
 
-      // Aguarda 1 segundo para o som tocar antes de mudar de tela
       setTimeout(() => {
         navigation.navigate('HomeTab', {
           screen: 'Home',
