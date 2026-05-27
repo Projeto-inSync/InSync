@@ -15,8 +15,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
-import { API_URL } from '@env';
 import { isSoundEnabled } from '../utils/SoundManager';
+import { toggleBackgroundMusic } from '../utils/MusicPlayer';
+import { API_URL } from '@env';
 // const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -167,70 +168,50 @@ export default function HomeScreen({ route, navigation }: any) {
       const idPaciente = await AsyncStorage.getItem('idPaciente');
       const idAtivo = await AsyncStorage.getItem('idAtivo');
       const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
-      const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
 
-      if (!idPaciente) return;
+      if (!idAtivo && !idPaciente) return;
+      let idParaBuscar = idAtivo || idPaciente;
 
-      // Filho logado diretamente: usa o próprio idPaciente
-      if (tipoLoginOriginal === 'filho') {
-        const response = await fetch(`${API_URL}/character-status/${idPaciente}`);
-        if (!response.ok) { setPetName('Sem mascote'); return; }
-        const data = await response.json();
-        if (data?.nome) setPetName(data.nome);
-        setPetStatus({
-          carboidrato: data.carboidrato ?? 0,
-          glicemia: data.glicemia ?? 0,
-          proteina: data.proteina ?? 0,
-        });
-        return;
-      }
-
-      // Responsável visualizando filho específico
-      if (usuarioAtivoTipo === 'filho' && idAtivo && idAtivo !== idPaciente) {
-        const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
-        if (!response.ok) { setPetName('Sem mascote'); return; }
-        const data = await response.json();
-        if (data?.nome) setPetName(data.nome);
-        setPetStatus({
-          carboidrato: data.carboidrato ?? 0,
-          glicemia: data.glicemia ?? 0,
-          proteina: data.proteina ?? 0,
-        });
-        return;
-      }
-
-      // Responsável na própria conta: busca primeiro filho
-      const depRes = await fetch(`${API_URL}/dependents/${idPaciente}`);
-      if (depRes.ok) {
-        const dependents = await depRes.json();
-        if (dependents.length === 0) { setPetName('Sem mascote'); return; }
-        const idFilho = String(dependents[0].idpaciente);
-        await AsyncStorage.setItem('idAtivo', idFilho);
-        const response = await fetch(`${API_URL}/character-status/${idFilho}`);
-        if (!response.ok) { setPetName('Sem mascote'); return; }
-        const data = await response.json();
-        if (data?.nome) setPetName(data.nome);
-        setPetStatus({
-          carboidrato: data.carboidrato ?? 0,
-          glicemia: data.glicemia ?? 0,
-          proteina: data.proteina ?? 0,
-        });
-
-        const novaGlicemia = data.glicemia ?? 0;
-        if (novaGlicemia > 60) {
-          navigation.navigate('Calendar', {
-            alertaGlicemiaImediato: {
-              idpaciente: data.idpaciente,
-              nomefilho: data.nome || 'Seu filho',
-              valorGlicemia: novaGlicemia
-            }
-          });
+      if (usuarioAtivoTipo === 'responsavel' && idParaBuscar === idPaciente) {
+        const depRes = await fetch(`${API_URL}/dependents/${idPaciente}`);
+        if (depRes.ok) {
+          const dependents = await depRes.json();
+          if (dependents.length === 0) { setPetName('Sem mascote'); return; }
+          idParaBuscar = String(dependents[0].idpaciente);
+          await AsyncStorage.setItem('idAtivo', idParaBuscar);
         }
+      }
+
+      const response = await fetch(`${API_URL}/character-status/${idParaBuscar}`);
+      if (!response.ok) {
+        setPetName('Sem mascote');
+        return;
+      }
+      const data = await response.json();
+
+      if (data?.nome) setPetName(data.nome);
+      else setPetName('Sem mascote');
+      const novaGlicemia = data.glicemia ?? 0;
+      setPetStatus({
+        carboidrato: data.carboidrato ?? 0,
+        glicemia:    novaGlicemia,
+        proteina:    data.proteina    ?? 0,
+      });
+
+      if (usuarioAtivoTipo === 'responsavel' && novaGlicemia > 60) {
+        navigation.navigate('Calendar', {
+          alertaGlicemiaImediato: {
+            idpaciente: data.idpaciente,
+            nomefilho: petName || 'Seu filho',
+            valorGlicemia: novaGlicemia
+          }
+        });
       }
     } catch (error) {
       console.log('Erro ao buscar dados do pet:', error);
     }
   }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchPetName();
@@ -238,6 +219,19 @@ export default function HomeScreen({ route, navigation }: any) {
       return () => clearInterval(interval);
     }, [fetchPetName])
   );
+
+  useFocusEffect(
+  useCallback(() => {
+    const gerenciarMusica = async () => {
+      const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
+      const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
+      const isFilho =
+        tipoLoginOriginal === 'filho' || usuarioAtivoTipo === 'filho';
+      await toggleBackgroundMusic(isFilho);
+    };
+    gerenciarMusica();
+  }, [])
+);
 
   useEffect(() => {
     if (route.params?.novasConquistas?.length > 0) {
@@ -249,27 +243,6 @@ export default function HomeScreen({ route, navigation }: any) {
   }, [route.params?.novasConquistas]);
 
   const pandaScale = isEating ? eatScaleAnim : breathAnim;
-  // Função para tocar o som ao clicar no panda
-  // const playPandaSound = async () => {
-  //   try {
-  //     // 2. Trava de som: Se estiver desligado, sai da função antes de carregar o áudio
-  //     if (!isSoundEnabled) return;
-
-  //     const { sound } = await Audio.Sound.createAsync(
-  //       require('../assets/panda_sound.mp3') 
-  //     );
-      
-  //     sound.setOnPlaybackStatusUpdate((status) => {
-  //       if (status.isLoaded && status.didJustFinish) {
-  //         sound.unloadAsync();
-  //       }
-  //     });
-
-  //     await sound.playAsync();
-  //   } catch (error) {
-  //     console.error('Erro ao tocar o som interativo do panda:', error);
-  //   }
-  // };
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -280,7 +253,6 @@ export default function HomeScreen({ route, navigation }: any) {
         setIsEating(true);
 
         try {
-          // 3. Trava de som: Só carrega e toca o som de mastigar se estiver ativado
           if (isSoundEnabled) {
             const { sound } = await Audio.Sound.createAsync(
               require('../assets/mastigando.mp3')
@@ -357,10 +329,15 @@ export default function HomeScreen({ route, navigation }: any) {
               { translateX: wobbleAnim },
             ]
           }}>
-            {/* ✅ TouchableOpacity integrado na imagem do panda — sem duplicação */}
             <TouchableOpacity activeOpacity={0.8} onPress={playPandaSound}>
               <Image
-                source={isEating ? require('../assets/eating_panda.png') : require('../assets/happy_panda.png')}
+                source={
+                  isEating
+                    ? require('../assets/eating_panda.png')
+                    : petStatus.glicemia > 40
+                      ? require('../assets/sad_panda.png')
+                      : require('../assets/happy_panda.png')
+                }
                 style={styles.pandaImage}
               />
             </TouchableOpacity>
