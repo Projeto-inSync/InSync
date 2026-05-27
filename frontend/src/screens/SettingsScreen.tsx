@@ -1,26 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-
-// Importamos os gerenciadores de áudio globais
 import { toggleBackgroundMusic } from '../utils/MusicPlayer'; 
-import { isSoundEnabled, toggleSoundEffects } from '../utils/SoundManager'; // <-- Nova importação
+import { isSoundEnabled, toggleSoundEffects } from '../utils/SoundManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen({ navigation }: any) {
-  // O estado inicial agora lê a variável global para manter a consistência
   const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled);
   const [musicEnabled, setMusicEnabled] = useState(true);
+  const [isFilho, setIsFilho] = useState(false);
+  const isMounted = useRef(false);
 
-  // Efeito que dispara sempre que a chavinha da música for alternada
   useEffect(() => {
-    toggleBackgroundMusic(musicEnabled);
-  }, [musicEnabled]);
+    const checkTipo = async () => {
+      const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
+      const usuarioAtivoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
+      const filho =
+        tipoLoginOriginal === 'filho' || usuarioAtivoTipo === 'filho';
+      setIsFilho(filho);
+    };
+    checkTipo();
+  }, []);
 
-  // Função que atualiza a tela e a variável global ao mesmo tempo
+
+useEffect(() => {
+  if (!isMounted.current) {
+    isMounted.current = true;
+    return;
+  }
+  toggleBackgroundMusic(musicEnabled);
+}, [musicEnabled]);
+
   const handleSoundToggle = (value: boolean) => {
-    setSoundEnabled(value); // Atualiza o visual da chavinha
-    toggleSoundEffects(value); // Desliga/Liga os sons no resto do app
+    setSoundEnabled(value);
+    toggleSoundEffects(value);
   };
 
   return (
@@ -31,54 +45,55 @@ export default function SettingsScreen({ navigation }: any) {
       </View>
 
       <View style={styles.content}>
-        
-        {/* Seção de Áudio */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Áudio</Text>
-          
-          <View style={styles.card}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <View style={styles.iconWrapper}>
-                  <Ionicons name="volume-high" size={22} color={colors.primaryGreen} />
-                </View>
-                <Text style={styles.settingText}>Efeitos Sonoros</Text>
-              </View>
-              <Switch
-                trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
-                thumbColor={soundEnabled ? colors.primaryGreen : '#FAFAFA'}
-                onValueChange={handleSoundToggle} // <-- Alterado para usar a nossa nova função
-                value={soundEnabled}
-              />
-            </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <View style={styles.iconWrapper}>
-                  <Ionicons name="musical-notes" size={22} color={colors.primaryGreen} />
+        {isFilho && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Áudio</Text>
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <View style={styles.iconWrapper}>
+                    <Ionicons name="volume-high" size={22} color={colors.primaryGreen} />
+                  </View>
+                  <Text style={styles.settingText}>Efeitos Sonoros</Text>
                 </View>
-                <Text style={styles.settingText}>Música de Fundo</Text>
+                <Switch
+                  trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+                  thumbColor={soundEnabled ? colors.primaryGreen : '#FAFAFA'}
+                  onValueChange={handleSoundToggle}
+                  value={soundEnabled}
+                />
               </View>
-              <Switch
-                trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
-                thumbColor={musicEnabled ? colors.primaryGreen : '#FAFAFA'}
-                onValueChange={setMusicEnabled}
-                value={musicEnabled}
-              />
+
+              <View style={styles.divider} />
+
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <View style={styles.iconWrapper}>
+                    <Ionicons name="musical-notes" size={22} color={colors.primaryGreen} />
+                  </View>
+                  <Text style={styles.settingText}>Música de Fundo</Text>
+                </View>
+                <Switch
+                  trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+                  thumbColor={musicEnabled ? colors.primaryGreen : '#FAFAFA'}
+                  onValueChange={setMusicEnabled}
+                  value={musicEnabled}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
-        {/* Seção Geral */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Geral</Text>
           <View style={styles.card}>
-            
             <TouchableOpacity 
               style={styles.settingRow} 
-              onPress={() => navigation.navigate('Login')}
+              onPress={async () => {
+                await toggleBackgroundMusic(false);
+                navigation.navigate('Login');
+              }}
             >
               <View style={styles.settingInfo}>
                 <View style={[styles.iconWrapper, { backgroundColor: '#FFEBEE' }]}>
@@ -90,7 +105,6 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#E53935" />
             </TouchableOpacity>
-
           </View>
         </View>
 
