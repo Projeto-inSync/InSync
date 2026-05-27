@@ -39,7 +39,10 @@ config = {
 CATEGORIAS_SAUDAVEIS = {
     "carbohydrates", "carbs", "fruits", "fruit",
     "vegetables", "veggies", "dairy", "milk",
-    "proteins", "protein", "meat", "legumes", "nuts"
+    "proteins", "protein", "meat", "legumes", "nuts",
+    "grains", "grain", "whole grains", "fish", "seafood",
+    "eggs", "egg", "beans", "lentils", "seeds",
+    "salad", "soup", "rice", "oats", "yogurt"
 }
 
 def get_db_connection():
@@ -186,10 +189,10 @@ def verificar_e_desbloquear_conquistas(id_paciente: int, cursor, total_refeicoes
         necessarias = row['missoes_necessarias']
         desbloqueou = False
 
-        if necessarias == 0 and total_refeicoes >= 1:
-            desbloqueou = True
-        elif necessarias > 0 and total_saudaveis >= necessarias:
-            desbloqueou = True
+        if necessarias == 0:
+            desbloqueou = total_refeicoes >=1
+        else:
+            desbloqueou = total_saudaveis >= necessarias
 
         if desbloqueou:
             cursor.execute("""
@@ -214,7 +217,10 @@ def save_status_to_db(id_paciente, status_data):
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         classification = status_data.get('classification', '')
-        eh_saudavel = classification.lower() in CATEGORIAS_SAUDAVEIS
+        classification_lower = classification.lower().strip()
+        eh_saudavel = (
+            classification.lower in CATEGORIAS_SAUDAVEIS or any(word in CATEGORIAS_SAUDAVEIS for word in classification_lower.split())
+        )
 
         cursor.execute("""
             UPDATE Personagem
