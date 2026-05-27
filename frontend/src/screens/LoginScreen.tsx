@@ -58,7 +58,7 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('nome', data.user.nome);
       await AsyncStorage.setItem('usuarioAtivoTipo', data.user.tipo);
       await AsyncStorage.setItem('tipoLoginOriginal', data.user.tipo);
-      // await AsyncStorage.removeItem('idAtivo');
+      await AsyncStorage.removeItem('idAtivo');
 
       if (data.user.tipo === 'admin') {
         navigation.navigate('Admin');
