@@ -41,7 +41,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [tipoLoginOriginal, setTipoLoginOriginal] = useState('');
   const [usuarioAtivoTipo, setUsuarioAtivoTipo] = useState('');
 
-  const fetchConquistas = async (idParaBuscar?: string) => { // ✅ aceita parâmetro
+  const fetchConquistas = async (idParaBuscar?: string) => {
     try {
       setLoadingConquistas(true);
       let id = idParaBuscar;
@@ -76,7 +76,6 @@ export default function ProfileScreen({ navigation }: any) {
       if (ativoTipo) setUsuarioAtivoTipo(ativoTipo);
       if (nomeResponsavel) setParentName(nomeResponsavel);
 
-      // Se é filho logado diretamente, idAtivo deve ser o próprio idPaciente
       if (tipoOriginal === 'filho') {
         if (!idAtivo) {
           await AsyncStorage.setItem('idAtivo', idPaciente!);
@@ -85,10 +84,9 @@ export default function ProfileScreen({ navigation }: any) {
         setCurrentUser(nomeResponsavel || 'Filho');
         await fetchConquistas(idAtivo || undefined);
         setLoading(false);
-        return; // não precisa buscar dependentes
+        return;
       }
 
-      // Fluxo normal do responsável
       if (idPaciente) {
         await AsyncStorage.setItem('idResponsavel', idPaciente);
         if (!idAtivo) {
