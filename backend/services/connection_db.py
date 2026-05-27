@@ -590,10 +590,6 @@ def toggle_user_status_service(user_id: int, is_active: bool):
         if cursor: cursor.close()
         if conn:   conn.close()
 
-# ==========================================
-# FUNÇÕES ADICIONAIS DE RECUPERAÇÃO DE SENHA
-# ==========================================
-
 def send_reset_email(to_email: str, token: str):
     msg = MIMEText(
         f"Olá!\n\n"
@@ -693,3 +689,56 @@ def reset_password_service(email: str, token: str, nova_senha: str):
             cursor.close()
         if conn:
             conn.close()
+
+def delete_child_service(id_filho: int, id_responsavel: int):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM Paciente
+            WHERE idPaciente = %s AND idResponsavel = %s AND tipo = 'filho'
+        """, (id_filho, id_responsavel))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Filho não encontrado ou sem permissão.")
+        conn.commit()
+        return {"success": True, "message": "Dependente removido com sucesso."}
+    except HTTPException:
+        raise
+    except Exception as err:
+        if conn: conn.rollback()
+        raise HTTPException(status_code=400, detail=str(err))
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+def update_child_username_service(id_filho: int, id_responsavel: int, novo_username: str):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE Paciente
+            SET nome = %s, username = %s
+            WHERE idPaciente = %s AND idResponsavel = %s AND tipo = 'filho'
+        """, (novo_username, novo_username, id_filho, id_responsavel))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Filho não encontrado ou sem permissão.")
+
+        conn.commit()
+        return {"success": True, "message": "Nome atualizado com sucesso."}
+    except pg_errors.UniqueViolation:
+        if conn: conn.rollback()
+        raise HTTPException(status_code=409, detail="Este username já está em uso.")
+    except HTTPException:
+        raise
+    except Exception as err:
+        if conn: conn.rollback()
+        raise HTTPException(status_code=400, detail=str(err))
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
