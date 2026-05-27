@@ -10,13 +10,16 @@ import {
   ScrollView,
   Modal,
   Pressable,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert,
+  TextInput
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import CustomButton from '../components/CustomButton';
+import { toggleBackgroundMusic } from '../utils/MusicPlayer';
 import { API_URL } from '@env';
 // const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -40,6 +43,9 @@ export default function ProfileScreen({ navigation }: any) {
   const [loadingConquistas, setLoadingConquistas] = useState(false);
   const [tipoLoginOriginal, setTipoLoginOriginal] = useState('');
   const [usuarioAtivoTipo, setUsuarioAtivoTipo] = useState('');
+  const [editandoFilho, setEditandoFilho] = useState<any | null>(null);
+  const [novoNome, setNovoNome] = useState('');
+  const [loadingAcao, setLoadingAcao] = useState(false);
 
   const fetchConquistas = async (idParaBuscar?: string) => {
     try {
@@ -142,6 +148,7 @@ export default function ProfileScreen({ navigation }: any) {
         await AsyncStorage.setItem('idAtivo', idResponsavel);
         await AsyncStorage.setItem('usuarioAtivoTipo', 'responsavel');
         await AsyncStorage.setItem('tipo', 'responsavel');
+        await toggleBackgroundMusic(false);
         navigation.reset({ index: 0, routes: [{ name: 'HomeTab' }]});
       }
     } else {
@@ -155,6 +162,72 @@ export default function ProfileScreen({ navigation }: any) {
   };
 
   const conquistasRecentes = conquistas.slice(0, 3);
+  const handleEditarFilho = (dep: any) => {
+  setEditandoFilho(dep);
+  setNovoNome(dep.nomefilho);
+};
+
+const handleSalvarNome = async () => {
+  if (!novoNome.trim()) return;
+  setLoadingAcao(true);
+  try {
+    const idResponsavel = await AsyncStorage.getItem('idPaciente');
+    const res = await fetch(`${API_URL}/child/${editandoFilho.idpaciente}/username`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idResponsavel: Number(idResponsavel),
+        novoUsername: novoNome.trim(),
+      }),
+    });
+    if (res.ok) {
+      setEditandoFilho(null);
+      await fetchFamilyData();
+      Alert.alert('Sucesso!', 'Nome do filho atualizado com sucesso.');
+    } else {
+      const err = await res.json();
+      Alert.alert('Erro', err.detail || 'Não foi possível atualizar.');
+    }
+  } catch {
+    Alert.alert('Erro de conexão', 'Tente novamente.');
+  } finally {
+    setLoadingAcao(false);
+  }
+};
+
+const handleDeletarFilho = (dep: any) => {
+  Alert.alert(
+    'Remover dependente',
+    `Deseja remover ${dep.nomefilho} da família? Esta ação não pode ser desfeita.`,
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          setLoadingAcao(true);
+          try {
+            const idResponsavel = await AsyncStorage.getItem('idPaciente');
+            const res = await fetch(
+              `${API_URL}/child/${dep.idpaciente}?id_responsavel=${idResponsavel}`,
+              { method: 'DELETE' }
+            );
+            if (res.ok) {
+              await fetchFamilyData();
+            } else {
+              const err = await res.json();
+              Alert.alert('Erro', err.detail || 'Não foi possível remover.');
+            }
+          } catch {
+            Alert.alert('Erro de conexão', 'Tente novamente.');
+          } finally {
+            setLoadingAcao(false);
+          }
+        },
+      },
+    ]
+  );
+};
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -260,21 +333,36 @@ export default function ProfileScreen({ navigation }: any) {
               <ActivityIndicator size="small" color={colors.primaryGreen} style={{ marginVertical: 15 }} />
             ) : dependents.length > 0 ? (
               dependents.map((dep) => (
-                <TouchableOpacity
-                  key={`${dep.idpaciente}-${dep.nomefilho}`}
-                  style={styles.userOption}
-                  onPress={() => handleSwitchUser(dep.nomefilho, false, dep.idpaciente)}
-                >
-                  <Image source={require('../assets/happy_panda.png')} style={styles.modalAvatar} />
-                  <View style={{ marginLeft: 15 }}>
-                    <Text style={[styles.userOptionText, { marginLeft: 0 }]}>{dep.nomefilho}</Text>
-                    {dep.nomemascote && (
-                      <Text style={{ color: colors.textGray, fontSize: 12 }}>
-                        Mascote: {dep.nomemascote}
-                      </Text>
-                    )}
+                <View key={`${dep.idpaciente}-${dep.nomefilho}`} style={styles.dependentRow}>
+                  <TouchableOpacity
+                    style={styles.userOptionFlex}
+                    onPress={() => handleSwitchUser(dep.nomefilho, false, dep.idpaciente)}
+                  >
+                    <Image source={require('../assets/happy_panda.png')} style={styles.modalAvatar} />
+                    <View style={{ marginLeft: 15 }}>
+                      <Text style={[styles.userOptionText, { marginLeft: 0 }]}>{dep.nomefilho}</Text>
+                      {dep.nomemascote && (
+                        <Text style={{ color: colors.textGray, fontSize: 12 }}>
+                          Mascote: {dep.nomemascote}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.acoesRow}>
+                    <TouchableOpacity
+                      onPress={() => { setModalVisible(false); handleEditarFilho(dep); }}
+                      style={styles.acaoBotao}
+                    >
+                      <Ionicons name="pencil-outline" size={20} color={colors.primaryGreen} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeletarFilho(dep)}
+                      style={styles.acaoBotao}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#E53935" />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))
             ) : (
               <Text style={styles.emptyText}>Nenhum filho adicionado ainda.</Text>
@@ -289,6 +377,47 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.addUserText}>Adicionar filho(a)</Text>
             </TouchableOpacity>
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal transparent visible={!!editandoFilho} animationType="fade">
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          onPress={() => setEditandoFilho(null)}
+        >
+          <Pressable style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Editar nome do filho</Text>
+            <TextInput
+              style={styles.editInput}
+              value={novoNome}
+              onChangeText={setNovoNome}
+              autoCapitalize="none"
+              placeholder="Novo username"
+            />
+            {loadingAcao ? (
+              <ActivityIndicator color={colors.primaryGreen} style={{ marginTop: 16 }} />
+            ) : (
+              <View style={styles.editBotoesRow}>
+                <TouchableOpacity
+                  style={styles.editBotaoCancelar}
+                  onPress={() => setEditandoFilho(null)}
+                >
+                  <Text style={styles.editBotaoCancelarText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.editBotaoSalvar}
+                  onPress={handleSalvarNome}
+                >
+                  <Text style={styles.editBotaoSalvarText}>Salvar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -351,5 +480,37 @@ const styles = StyleSheet.create({
   userOptionText: { fontSize: 18, color: colors.textDark, marginLeft: 15, fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#E0E0E0', marginVertical: 10 },
   addUserOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, justifyContent: 'center' },
-  addUserText: { fontSize: 16, color: colors.primaryGreen, fontWeight: 'bold', marginLeft: 10 },
+  addUserText: { fontSize: 16, color: colors.primaryGreen, fontWeight: 'bold', marginLeft: 10
+  },
+  dependentRow: {
+  flexDirection: 'row', alignItems: 'center',
+  justifyContent: 'space-between', paddingVertical: 10,
+  },
+  userOptionFlex: {
+    flexDirection: 'row', alignItems: 'center', flex: 1,
+  },
+  acoesRow: { flexDirection: 'row', gap: 4 },
+  acaoBotao: { padding: 8 },
+  editModalContent: {
+    backgroundColor: 'white', borderRadius: 20,
+    padding: 24, width: '85%', alignSelf: 'center',
+  },
+  editInput: {
+    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 12,
+    paddingHorizontal: 15, height: 50, fontSize: 16,
+    color: colors.textDark, marginTop: 12,
+  },
+  editBotoesRow: {
+    flexDirection: 'row', gap: 12, marginTop: 20,
+  },
+  editBotaoCancelar: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: '#E0E0E0', alignItems: 'center',
+  },
+  editBotaoCancelarText: { color: colors.textGray, fontWeight: '600' },
+  editBotaoSalvar: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: colors.primaryGreen, alignItems: 'center',
+  },
+  editBotaoSalvarText: { color: 'white', fontWeight: '600' },
 });
