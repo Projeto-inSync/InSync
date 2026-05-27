@@ -5,16 +5,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-// import { API_URL } from '@env';
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { Audio } from 'expo-av';
+import { isSoundEnabled } from '../utils/SoundManager';
+import { API_URL } from '@env';
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type RootStackParamList = {
   Analysis: { imageBase64: string };
 };
-import { Audio } from 'expo-av';
-
-// 1. Importamos a variável global que diz se o som está liberado
-import { isSoundEnabled } from '../utils/SoundManager';
 
 type Props = {
   navigation: NativeStackNavigationProp<any, any>;
@@ -34,7 +32,6 @@ export default function AnalysisScreen({ navigation }: Props) {
       const tipoLoginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
       const tipo = await AsyncStorage.getItem('tipo');
 
-      // Filho logado diretamente
       if (tipoLoginOriginal === 'filho') {
         if (!idPaciente) return;
         const response = await fetch(`${API_URL}/character-status/${idPaciente}`);
@@ -44,7 +41,6 @@ export default function AnalysisScreen({ navigation }: Props) {
         return;
       }
 
-      // Responsável visualizando filho específico
       if (tipo === 'filho' && idAtivo) {
         const response = await fetch(`${API_URL}/character-status/${idAtivo}`);
         if (!response.ok) return;
@@ -53,7 +49,6 @@ export default function AnalysisScreen({ navigation }: Props) {
         return;
       }
 
-      // Responsável na própria conta: busca primeiro filho
       if (tipo === 'responsavel') {
         const idResponsavel = idPaciente;
         if (idAtivo && idAtivo !== idResponsavel) {
@@ -80,11 +75,9 @@ export default function AnalysisScreen({ navigation }: Props) {
     }, [])
   );
   
-  // Criamos uma referência persistente para o som não se perder entre as renderizações
   const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
-  // Inicia a animação de rotação do ícone
   Animated.loop(
     Animated.timing(spinValue, {
       toValue: 1,
@@ -94,14 +87,11 @@ export default function AnalysisScreen({ navigation }: Props) {
     })
   ).start();
 
-  // Variáveis de controle locais para sincronização
   let backendData: any = null;
   let timerFinished = false;
 
-  // Função auxiliar para navegar com segurança quando ambos os critérios forem atendidos
   const tryNavigation = (data: any) => {
     if (timerFinished && data) {
-      // Ambos terminaram! Limpa o som e troca de tela com os dados reais
       if (soundRef.current) {
         soundRef.current.stopAsync()
           .then(() => soundRef.current?.unloadAsync())
@@ -112,7 +102,6 @@ export default function AnalysisScreen({ navigation }: Props) {
     }
   };
 
-  // 1. Toca o som de análise
   const playAnalysisSound = async () => {
     try {
       if (isSoundEnabled) {
