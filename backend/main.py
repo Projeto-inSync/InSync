@@ -19,7 +19,9 @@ from services.connection_db import (
     toggle_user_status_service,
     get_historico_service,
     request_password_reset_service,
-    reset_password_service
+    reset_password_service,
+    delete_child_service,
+    update_child_username_service
 )
 from status import Status
 from services.decay_service import iniciar_decaimento
@@ -33,8 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- Schemas do Pydantic ---
 
 class ImageData(BaseModel):
     image_base64: str
@@ -82,16 +82,12 @@ class ResetPasswordData(BaseModel):
     token: str
     nova_senha: str
 
-# Inicialização dos estados globais do Pet e do loop de decaimento
 pet_status = Status()
 iniciar_decaimento()
-
-# --- Rotas dos Endpoints ---
 
 @app.post("/process-image")
 async def process_image(data: ImageData):
     try:
-        # Processa a imagem enviada via mobile usando o modelo/IA do backend
         classification, delta = process_image_service(data.image_base64, pet_status)
         return {"classification": classification, "status": delta}
     except Exception as e:
@@ -137,7 +133,6 @@ async def login_user(user: LoginData):
 @app.post("/save-status")
 async def save_status(status_data: StatusData):
     try:
-        # Salva o impacto nutricional e retorna conquistas inéditas desbloqueadas
         novas_conquistas = save_status_to_db(status_data.idPaciente, {
             'carboidrato': status_data.carboidrato,
             'glicemia': status_data.glicemia,
@@ -200,8 +195,6 @@ async def get_historico(id_paciente: int, periodo: str = Query(default="week", p
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# --- Módulos de Recuperação de Senha ---
-
 @app.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordData):
     try:
@@ -221,8 +214,6 @@ async def reset_password(data: ResetPasswordData):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-# --- Módulos e Visões Administrativas ---
 
 @app.get("/admin-stats")
 async def get_admin_stats():
@@ -264,6 +255,30 @@ async def toggle_user_status(user_id: int, data: ToggleStatusData):
 async def get_dependents(id_responsavel: str):
     try:
         result = get_dependents_service(id_responsavel)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+class UpdateChildData(BaseModel):
+    idResponsavel: int
+    novoUsername: str
+
+@app.delete("/child/{id_filho}")
+async def delete_child(id_filho: int, id_responsavel: int = Query(...)):
+    try:
+        result = delete_child_service(id_filho, id_responsavel)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/child/{id_filho}/username")
+async def update_child_username(id_filho: int, data: UpdateChildData):
+    try:
+        result = update_child_username_service(id_filho, data.idResponsavel, data.novoUsername)
         return result
     except HTTPException:
         raise
