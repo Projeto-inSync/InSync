@@ -2,27 +2,36 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from services.images_service import process_image_service
-from services.connection_db import (
+from services.auth_service import (
     register_user_service,
-    add_character_name_service,
     login_user_service,
-    save_status_to_db,
+    request_password_reset_service,
+    reset_password_service,
+)
+from services.child_service import (
+    create_child_service,
+    get_dependents_service,
+    delete_child_service,
+    update_child_username_service,
+)
+from services.character_service import (
+    add_character_name_service,
     get_character_status,
     add_mission_service,
     get_missions_service,
+)
+from services.health_service import (
+    save_status_to_db,
+    get_historico_service,
+)
+from services.admin_service import (
     get_admin_stats_service,
     get_monthly_registrations_service,
-    create_child_service,
-    get_dependents_service,
-    get_conquistas_service,
     get_all_users_admin_service,
+    get_all_users_grouped_service,
     toggle_user_status_service,
-    get_historico_service,
-    request_password_reset_service,
-    reset_password_service,
-    delete_child_service,
-    update_child_username_service
 )
+from services.achievement_service import get_conquistas_service
 from status import Status
 from services.decay_service import iniciar_decaimento
 
@@ -239,6 +248,14 @@ async def get_monthly_registrations():
 async def get_admin_users():
     try:
         result = get_all_users_admin_service()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/admin-users-grouped")
+async def get_admin_users_grouped():
+    try:
+        result = get_all_users_grouped_service()
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
