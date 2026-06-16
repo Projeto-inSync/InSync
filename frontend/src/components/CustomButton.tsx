@@ -1,32 +1,39 @@
 import React from 'react';
-import { Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { Text, StyleSheet, Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
 
-type CustomButtonProps = {
+interface CustomButtonProps extends PressableProps {
   title: string;
   onPress: () => void;
-  // Permite escolhermos se o botão é o Principal (Verde) ou Secundário (Vermelho/Cancelar)
   variant?: 'primary' | 'cancel'; 
-  style?: ViewStyle; // Permite passarmos margens extras lá da tela
-};
+  style?: StyleProp<ViewStyle>;
+}
 
-export default function CustomButton({ title, onPress, variant = 'primary', style }: CustomButtonProps) {
+export default function CustomButton({ 
+  title, 
+  onPress, 
+  variant = 'primary', 
+  style, 
+  disabled, 
+  ...rest 
+}: CustomButtonProps) {
   return (
     <Pressable
       onPress={onPress}
-      // O Pressable é incrível porque ele sabe quando está sendo 'pressed' (pressionado)
+      disabled={disabled}
+      {...rest}
       style={({ pressed }) => [
         styles.buttonBase,
         variant === 'primary' ? styles.primaryBg : styles.cancelBg,
-        pressed && styles.buttonPressed, // Se pressionado, aplica o efeito de afundar!
-        style // Aplica margens se a tela pedir
+        pressed && !disabled && styles.buttonPressed, 
+        style as any
       ]}
     >
       {({ pressed }) => (
         <Text style={[
           styles.textBase,
           variant === 'primary' ? styles.primaryText : styles.cancelText,
-          pressed && styles.textPressed // Se quiser que o texto mude de cor ao apertar, é aqui
+          pressed && !disabled && styles.textPressed
         ]}>
           {title}
         </Text>
@@ -42,7 +49,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    // Colocamos uma sombrinha para ele parecer 3D antes de ser clicado
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -53,11 +59,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryGreen,
   },
   cancelBg: {
-    backgroundColor: 'transparent', // Fundo transparente
+    backgroundColor: 'transparent',
   },
   buttonPressed: {
-    transform: [{ scale: 0.95 }], // O segredo do movimento: reduz o tamanho em 5%
-    elevation: 0, // Tira a sombra para parecer que afundou na tela
+    transform: [{ scale: 0.95 }],
+    elevation: 0,
     opacity: 0.9,
   },
   textBase: {
@@ -68,9 +74,9 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   cancelText: {
-    color: '#E53935', // Vermelho para cancelar
+    color: '#E53935',
   },
   textPressed: {
-    opacity: 0.8, // Deixa o texto levemente transparente no clique
+    opacity: 0.8,
   }
 });
