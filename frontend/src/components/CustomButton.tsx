@@ -6,16 +6,8 @@ interface CustomButtonProps extends PressableProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'cancel'; 
-  style?: StyleProp<ViewStyle>; // Ajustado para aceitar múltiplos estilos combinados
+  style?: StyleProp<ViewStyle>;
 }
-
-// type CustomButtonProps = {
-//   title: string;
-//   onPress: () => void;
-//   // Permite escolhermos se o botão é o Principal (Verde) ou Secundário (Vermelho/Cancelar)
-//   variant?: 'primary' | 'cancel'; 
-//   style?: ViewStyle; // Permite passarmos margens extras lá da tela
-// };
 
 export default function CustomButton({ 
   title, 
@@ -28,14 +20,13 @@ export default function CustomButton({
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled} // 3. Passamos o disabled para o Pressable nativo funcionar
-      {...rest} // Passa qualquer outra propriedade vinda da tela
+      disabled={disabled}
+      {...rest}
       style={({ pressed }) => [
         styles.buttonBase,
         variant === 'primary' ? styles.primaryBg : styles.cancelBg,
-        // Só aplica o efeito de "afundar" (pressed) se o botão NÃO estiver desativado (disabled)
         pressed && !disabled && styles.buttonPressed, 
-        style as any // Mantém os estilos customizados da tela externa
+        style as any
       ]}
     >
       {({ pressed }) => (
