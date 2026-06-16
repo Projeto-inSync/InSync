@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../theme/colors';
-import SettingsScreen from '../screens/SettingsScreen';
-import CameraScreen from '../screens/CameraScreen';
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import CalendarScreen from '../screens/CalendarScreen';
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, Dimensions, PixelRatio } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { colors } from "../theme/colors";
+import SettingsScreen from "../screens/Settings/SettingsScreen";
+import CameraScreen from "../screens/Camera/CameraScreen";
+import HomeScreen from "../screens/Home/HomeScreen";
+import ProfileScreen from "../screens/Profile/ProfileScreen";
+import CalendarScreen from "../screens/Calendar/CalendarScreen";
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const { width: SCREEN_W } = Dimensions.get("window");
 const scale = (size: number) => (SCREEN_W / 390) * size;
 const scaleFont = (size: number) =>
   Math.round(PixelRatio.roundToNearestPixel((SCREEN_W / 390) * size));
@@ -21,13 +21,15 @@ const Tab = createBottomTabNavigator();
 export default function TabNavigator() {
   const insets = useSafeAreaInsets();
   const [usuarioAtivoTipo, setUsuarioAtivoTipo] = useState<string | null>(null);
-  const [tipoLoginOriginal, setTipoLoginOriginal] = useState<string | null>(null);
+  const [tipoLoginOriginal, setTipoLoginOriginal] = useState<string | null>(
+    null,
+  );
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const checkUserType = async () => {
-      const ativoTipo = await AsyncStorage.getItem('usuarioAtivoTipo');
-      const loginOriginal = await AsyncStorage.getItem('tipoLoginOriginal');
+      const ativoTipo = await AsyncStorage.getItem("usuarioAtivoTipo");
+      const loginOriginal = await AsyncStorage.getItem("tipoLoginOriginal");
       setUsuarioAtivoTipo(ativoTipo);
       setTipoLoginOriginal(loginOriginal);
       setReady(true);
@@ -36,11 +38,11 @@ export default function TabNavigator() {
   }, []);
 
   if (!ready) return null;
-  
-  const isResponsavelAtivo =
-    tipoLoginOriginal === 'responsavel' && usuarioAtivoTipo === 'responsavel';
 
-  const isFilhoAtivo = usuarioAtivoTipo === 'filho';
+  const isResponsavelAtivo =
+    tipoLoginOriginal === "responsavel" && usuarioAtivoTipo === "responsavel";
+
+  const isFilhoAtivo = usuarioAtivoTipo === "filho";
 
   return (
     <Tab.Navigator
@@ -48,10 +50,10 @@ export default function TabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primaryGreen,
-        tabBarInactiveTintColor: '#A0A0A0',
+        tabBarInactiveTintColor: "#A0A0A0",
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: 'white',
+          backgroundColor: "white",
           borderTopWidth: 0,
           elevation: 10,
           height: scale(60) + insets.bottom,
@@ -122,6 +124,15 @@ export default function TabNavigator() {
 }
 
 const styles = StyleSheet.create({
-  dummyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F9F4' },
-  dummyText: { fontSize: scaleFont(20), fontWeight: 'bold', color: colors.primaryGreen },
+  dummyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F4F9F4",
+  },
+  dummyText: {
+    fontSize: scaleFont(20),
+    fontWeight: "bold",
+    color: colors.primaryGreen,
+  },
 });
